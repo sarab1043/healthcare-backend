@@ -45,7 +45,8 @@ urlpatterns = [
     path('doctors/search/', SearchDoctors.as_view(), name='search-doctors'),
     path('doctor/appointments/', DoctorAppointmentView.as_view( ), name='get-all-appointments'),
     path('doctor/appointments/<id>/', DoctorAppointmentByIdView.as_view( ), name='get-appointments-by-id'),
-    
+    path('doctor/appointment-duration/', UpdateAppointmentDurationView.as_view(), name='update-appointment-duration'),
+
     path('patient/appointments/', PatientAppointmentView.as_view(), name="appointments-by-patient"),
     path('patient/records/', PatientRecordView.as_view(), name="patient-record"),
 

@@ -295,7 +295,11 @@ class DoctorService(DoctorBaseService):
                     
                     # Add or update timeslots from request data
                     availability_obj.timeslot.add(*timeslot_ids)
-                
+
+                    if request.data.get('available') == False:
+                        print("this condition gets true")
+                        availability_obj.timeslot.clear()
+
                 serializer = UpdateTimeSpecificAvailabilitySerializer(availability_obj, data=request.data)
                 if serializer.is_valid():
                     serializer.save()
@@ -331,3 +335,24 @@ class DoctorService(DoctorBaseService):
         except Exception as e:
             print("Error:", e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+
+    def update_appointment_duration(self, request, format=None):
+        try:
+            appointment_slot_duration = request.data.get("appointment_slot_duration")
+            doctor_obj = DoctorProfile.objects.get(user=request.user.id)
+            
+            if not appointment_slot_duration:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "appointment_slot_duration is required"}
+
+            serializer = UpdateAppointmentDurationSerializer(doctor_obj, data=request.data, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return {"data": serializer.data, "status": status.HTTP_200_OK, "success": "Appointment duration updated successfully"}
+            
+        except DoctorProfile.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
+        except Exception as e:
+            print(e)
+            return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
