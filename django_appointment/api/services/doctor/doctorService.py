@@ -134,7 +134,11 @@ class DoctorService(DoctorBaseService):
                             "status": status.HTTP_400_BAD_REQUEST,
                             "error": "You cannot book appointments for past dates or times that have already passed."
                         })
-
+                    
+                    appointment_duration = end_time - start_time
+                    if appointment_duration > timedelta(minutes=doctor_obj.appointment_slot_duration):
+                        return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Appointment duration exceeds slot duration"})
+            
                 slot_available = patientService.is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time)
                 print("slot_available", slot_available)
                 if not slot_available:
