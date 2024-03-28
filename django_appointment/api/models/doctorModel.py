@@ -17,6 +17,7 @@ class DoctorProfile(models.Model):
     qualification = models.TextField(null=True, blank=True)
     specializations = models.ManyToManyField(Specialization, null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
+    appointment_slot_duration = models.IntegerField(default=45)
 
 class TimeSlot(models.Model):
     start_time = models.TimeField()

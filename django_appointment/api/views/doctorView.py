@@ -87,3 +87,12 @@ class SpecializationListView(APIView):
     def get(self, request, format=None):
         result = doctorService.get_all_specialization(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
+    
+
+class UpdateAppointmentDurationView(APIView):
+    """
+    Update Appointment Duration
+    """
+    def  put(self, request, format=None):
+        result = doctorService.update_appointment_duration(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)

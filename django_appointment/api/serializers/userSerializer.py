@@ -80,3 +80,8 @@ class UpdateTimeSpecificAvailabilitySerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorAvailability
         fields = ('id', 'timeslot', 'date', 'break_start_time', 'break_end_time', 'description', 'available')
+
+class UpdateAppointmentDurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DoctorProfile
+        fields = ('appointment_slot_duration',)
