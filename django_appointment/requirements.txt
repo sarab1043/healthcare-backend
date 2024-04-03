@@ -1,0 +1,4 @@
+django-rest-swagger==2.2.0
+drf-yasg==1.21.7
+django-timezone-field==6.1.0
+google-auth==2.29.0
