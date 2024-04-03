@@ -69,10 +69,10 @@ class PatientService(PatientBaseService):
             if not DoctorProfile.objects.filter(user=doctor, location=loc_obj, specializations__name__iexact=specialization).exists():
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
 
-            if Appointment.objects.filter(patientEmail = patientEmail, start_time__lt=end_time, end_time__gt=start_time, doctor=doctor_obj).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
+            if Appointment.objects.filter(patientEmail = patientEmail, date=date, start_time__lt=end_time, end_time__gt=start_time, doctor=doctor_obj).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "You already have an appointment in between this slot"})
             
-            if Appointment.objects.filter(doctor=doctor_obj, start_time__lt=end_time, end_time__gt=start_time).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
+            if Appointment.objects.filter(doctor=doctor_obj, date=date, start_time__lt=end_time, end_time__gt=start_time).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not available on this time slot"})
 
            
@@ -147,26 +147,15 @@ class PatientService(PatientBaseService):
 
 def is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time):
     try:
-        print("fn called")
-        print(day_of_week)
-        print(doctor_obj)
-        print("date", date)
-        print("start time", start_time)
-        print("end time", end_time)
-
-        print("doc avail", DoctorAvailability.objects.filter(doctor=doctor_obj, day_of_week=day_of_week, timeslot__start_time__lt=end_time, timeslot__end_time__gt=start_time, available=False))
-        print("null", DoctorAvailability.objects.filter(doctor=doctor_obj, day_of_week=day_of_week, timeslot__isnull=True))
         availability_working_hours= DoctorAvailability.objects.filter(Q(day_of_week=day_of_week) | Q(date=date)).filter(
                     default_working_start_time__lte=start_time,
                     default_working_end_time__gte=end_time
                 )
         if not availability_working_hours:
-            print("not avail working hours")
             return False
         
         date_specific_availability = DoctorAvailability.objects.filter(doctor=doctor_obj, date=date)
         if date_specific_availability:
-            print("date specific")
             if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date).filter( Q(timeslot__isnull=True, available=False) | ~Q(available=True, timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time)).exists():
                 return False
             else:
@@ -177,7 +166,6 @@ def is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time)
             return True
 
         elif not DoctorAvailability.objects.filter(doctor=doctor_obj, day_of_week=day_of_week, timeslot__start_time__lt=end_time, timeslot__end_time__gt=start_time, available=True):
-            print("con5")
             return False
         else:
             return True
