@@ -22,7 +22,14 @@ class Appointment(models.Model):
     ]
     patientName = models.CharField(max_length=100, default=None)                                                                                        
     patientphoneNumber = models.IntegerField(default=None)
-    patientEmail = models.EmailField(default=None)                                                      
+    patientEmail = models.EmailField(default=None)    
+    patientDob = models.DateTimeField(default=None,null=True, blank=True)                                                  
+    GENDER_CHOICES = [
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+        ('', 'None')  # Added None as an option
+    ]
+    patientGender = models.CharField(max_length=8, choices=GENDER_CHOICES, default='', null=True, blank=True)                                                  
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
     specialization = models.ForeignKey(Specialization, on_delete=models.SET_NULL, null=True, blank=True)
     doctor = models.ForeignKey(DoctorProfile, on_delete=models.CASCADE, null=True, blank=True)    
