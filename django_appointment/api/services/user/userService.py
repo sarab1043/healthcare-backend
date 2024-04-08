@@ -88,8 +88,7 @@ class UserService(UserBaseService):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist"})
 
             if missing_params:
-                # return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}", "redirectUrl": "/missing-params"});
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
             user = CustomUser.objects.create_user(email=email, password=password, role=role)
             if (role == 'Doctor'):
                 if not specializations or not qualification or not country or not city:
@@ -125,8 +124,8 @@ class UserService(UserBaseService):
                     location = Location.objects.get(country__iexact = country,city__iexact = city)
                 else:
                     location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
-            user.location = location
-            user.save()
+                user.location = location
+                user.save()
             serializer = UserLoginSerializer(user)
             refresh = RefreshToken.for_user(user)
             data = serializer.data

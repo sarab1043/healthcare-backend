@@ -155,7 +155,7 @@ class PatientService(PatientBaseService):
             if request.user.email == appointment.patientEmail or request.user.email == appointment.doctor.user.email:
                 # Check if the appointment is confirmed or rescheduled
                record_obj = PatientRecord.objects.get(appointment=id)
-               serializer = GetAppointmentSerializer(record_obj, many=True)
+               serializer = PatientRecordSerializers(record_obj)
                return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
             else:
                 return {"data": None, "status": status.HTTP_403_FORBIDDEN, "error": "You are not authorized to access this appointment."}
