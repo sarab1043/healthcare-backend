@@ -66,7 +66,7 @@ class PatientService(PatientBaseService):
             if not slot_available:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "success": "Doctor not available on this time slot"})
 
-            if not DoctorProfile.objects.filter(user=doctor, location=loc_obj, specializations__name__iexact=specialization).exists():
+            if not DoctorProfile.objects.filter(user=doctor, specializations__name__iexact=specialization).exists() and CustomUser.objects.filter(id = doctor, location=loc_obj):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
 
             if Appointment.objects.filter(patientEmail = patientEmail, date=date, start_time__lt=end_time, end_time__gt=start_time, doctor=doctor_obj).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
@@ -88,7 +88,10 @@ class PatientService(PatientBaseService):
 
         except DoctorProfile.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
-
+        
+        except Specialization.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found with this specialization"})
+        
         except DoctorAvailability.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor is not available on this time"})
         except Exception as e:

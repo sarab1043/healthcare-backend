@@ -98,9 +98,13 @@ class DoctorService(DoctorBaseService):
             current_time = datetime.now()
             appointment_start_time = datetime.combine(appointment.date, appointment.start_time)
             three_hours_behind = appointment_start_time - timedelta(hours=3)
-            rescheduled_start_time = request.data.get('rescheduled_start_time')
-            rescheduled_end_time = request.data.get('rescheduled_end_time')
-            rescheduled_date = request.data.get('rescheduled_date')
+            rescheduled_start_time_str = request.data.get('start_time')
+            rescheduled_end_time_str = request.data.get('end_time')
+
+            # Convert string representations to datetime.time objects
+            rescheduled_start_time = datetime.strptime(rescheduled_start_time_str, '%H:%M:%S').time()
+            rescheduled_end_time = datetime.strptime(rescheduled_end_time_str, '%H:%M:%S').time()
+            rescheduled_date = request.data.get('date')
 
             start_time = appointment.start_time
             end_time = appointment.end_time
@@ -112,8 +116,6 @@ class DoctorService(DoctorBaseService):
                     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "The time limit to update the appointment has exceeded. You can only reschedule or cancel the appointment"}
 
             if apt_status == 'Rescheduled' or (apt_status == 'Confirmed' and appointment.status == 'Pending'):
-                # if apt_status == 'Rescheduled' and 'rescheduled_start_time' not in request.data and 'rescheduled_start_time' not in request.data and 'rescheduled_date' not in request.data:
-                #     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Resheduled start and end time required"}
 
                 if apt_status == 'Rescheduled' and not rescheduled_start_time and not rescheduled_end_time and not rescheduled_date:
                     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Resheduled start and end time required"}
@@ -124,22 +126,29 @@ class DoctorService(DoctorBaseService):
                     end_time = rescheduled_end_time
                     day_of_week = datetime.strptime(rescheduled_date, '%Y-%m-%d').weekday()
 
+                    # Convert time strings to datetime objects
                     start_datetime = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M:%S")
                     end_datetime = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M:%S")
                     day_string = DoctorAvailability.objects.filter(day_of_week=day_of_week, available=True)
 
-                    if (end_datetime<datetime.now()): 
-                        return ({
+                    if end_datetime < datetime.now(): 
+                        return {
                             "data": None,
                             "status": status.HTTP_400_BAD_REQUEST,
                             "error": "You cannot book appointments for past dates or times that have already passed."
-                        })
+                        }
                     
-                    appointment_duration = end_time - start_time
+                    # Calculate appointment duration
+                    appointment_duration = end_datetime - start_datetime
                     if appointment_duration > timedelta(minutes=doctor_obj.appointment_slot_duration):
-                        return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Appointment duration exceeds slot duration"})
-            
+                        return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Appointment duration exceeds slot duration"}
+
+                    request.data['start_time'] = rescheduled_start_time
+                    request.data['end_time'] = rescheduled_end_time
+                    request.data['date'] = rescheduled_date
+
                 slot_available = patientService.is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time)
+                
                 print("slot_available", slot_available)
                 if not slot_available:
                     print("slot not avail")
@@ -148,19 +157,20 @@ class DoctorService(DoctorBaseService):
                 if Appointment.objects.filter(
                     doctor=doctor_obj
                     ).filter(
-                        Q(date=date, start_time__lt=end_time, end_time__gt=start_time) & ~Q(status="Rescheduled") |
-                        Q(rescheduled_date=date, rescheduled_start_time__lt=end_time, rescheduled_end_time__gt=start_time)
+                        Q(date=date, start_time__lt=end_time, end_time__gt=start_time)  & 
+                        (Q(status="Rescheduled") | Q(status="Confirmed"))
                     ).exclude(Q(status="Cancelled") | Q(status="Completed") | Q(status="Pending")).exists():
                     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Your slot for this time is already booked."}
 
                 if Appointment.objects.filter(
                     patientEmail=appointment.patientEmail
                     ).filter(
-                        Q(date=date, start_time__lt=end_time, end_time__gt=start_time) & ~Q(status="Rescheduled") |
-                        Q(rescheduled_date=date, rescheduled_start_time__lt=end_time, rescheduled_end_time__gt=start_time)
+                        Q(date=date, start_time__lt=end_time, end_time__gt=start_time)  & 
+                        (Q(status="Rescheduled") | Q(status="Confirmed"))
                     ).exclude(Q(status="Cancelled") | Q(status="Completed") | Q(status="Pending")).exists():
                     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Patient already has an appointment scheduled for this time slot"}
 
+            
             serializer = UpdateAppointmentSerializer(appointment, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
