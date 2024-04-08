@@ -85,7 +85,7 @@ class UserService(UserBaseService):
             missing_params = [param for param in required_params if param not in request.data]
 
             if CustomUser.objects.filter(email=email).exists():
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist"})
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist",  "existing_email": 'true'})
 
             if missing_params:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
