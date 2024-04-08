@@ -78,69 +78,58 @@ class UserService(UserBaseService):
             fullname = request.data.get('fullname')
             contactnumber = request.data.get('contactnumber'),
             gender= request.data.get('gender')
-
-            required_params = ['email', 'password', 'specializations', 'country', 'city', 'qualification', 'fullname']
+            role=request.data.get('role')
+            
+                
+            required_params = ['email', 'password', 'role']
             missing_params = [param for param in required_params if param not in request.data]
 
             if CustomUser.objects.filter(email=email).exists():
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist"})
-            
-            print("request. data", request.data)
 
             if missing_params:
                 # return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}", "redirectUrl": "/missing-params"});
-        
-            if Location.objects.filter(country__iexact = country, city__iexact = city).exists():
-                location = Location.objects.get(country__iexact = country,city__iexact = city)
-            else:
-                location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
+            user = CustomUser.objects.create_user(email=email, password=password, role=role)
+            if (role == 'Doctor'):
+                if not specializations or not qualification or not country or not city:
+                    return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations and qualifications are required."})
+               
 
+                specialization_ids = [spec_obj.id for spec_obj in [Specialization.objects.filter(name__iexact=specialization_name).first() for specialization_name in specializations] if spec_obj is not None]
+                if not specialization_ids:
+                    return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations do not found"})
 
-            specialization_ids = [spec_obj.id for spec_obj in [Specialization.objects.filter(name__iexact=specialization_name).first() for specialization_name in specializations] if spec_obj is not None]
-            print(specialization_ids)
-            if not specialization_ids:
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations do not found"})
+                
+                doctorprofile = DoctorProfile.objects.create(user=user, qualification=qualification)
+                doctorprofile.specializations.set(specialization_ids)
+               
+                for day in range(0, 5):  # Monday to Friday
+                    doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
+                if fullname:
+                    doctorprofile.fullname = fullname
+                    doctorprofile.save()
+                if contactnumber:
+                    doctorprofile.contactnumber = contactnumber
+                    doctorprofile.save()
 
-            # Save the IDs of specializations to the DoctorProfile
-            user = CustomUser.objects.create_user(email=email, password=password)
-            
-            doctorprofile = DoctorProfile.objects.create(user=user, location=location, qualification=qualification)
-            doctorprofile.specializations.set(specialization_ids)
             if fullname:
-                user.fullname = fullname
-                user.save()
+                    user.fullname = fullname
+                    user.save()
             if gender:
                 user.gender = gender
                 user.save()
 
-            # existing_timeslots = TimeSlot.objects.filter(start_time='09:00', end_time='17:00')
-            # if not existing_timeslots.exists():
-            #     # Create timeslots for 9 am to 5 pm
-            #     start_time = datetime.strptime('09:00', '%H:%M').time()
-            #     end_time = datetime.strptime('17:00', '%H:%M').time()
-            #     timeslot = TimeSlot.objects.create(start_time=start_time, end_time=end_time)
-            # else:
-            #     timeslot = existing_timeslots.first()
-
-            # Creating availability for Monday to Friday if not already exists
-            for day in range(0, 5):  # Monday to Friday
-                doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
-                # if created:
-                #     doctor_availability.timeslot.add(timeslot)
-                #     doctor_availability.save()
-
-            if fullname:
-                doctorprofile.fullname = fullname
-                doctorprofile.save()
-            if contactnumber:
-                doctorprofile.contactnumber = contactnumber
-                doctorprofile.save()
-
+            if city or country:
+                if Location.objects.filter(country__iexact = country, city__iexact = city).exists():
+                    location = Location.objects.get(country__iexact = country,city__iexact = city)
+                else:
+                    location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
+            user.location = location
+            user.save()
             serializer = UserLoginSerializer(user)
             refresh = RefreshToken.for_user(user)
             data = serializer.data
-            print("data",data)
             data['token'] = str(refresh)
             return ({"data": data, "status": status.HTTP_201_CREATED, "success": "User created successfully"})
         

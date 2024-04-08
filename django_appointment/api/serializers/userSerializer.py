@@ -8,7 +8,7 @@ class LocationSerializers(serializers.ModelSerializer):
         fields = "__all__"
 
 class UserLoginSerializer(serializers.ModelSerializer):
-
+    location = LocationSerializers(read_only=True)
     class Meta:
         model = CustomUser
         exclude = ['password', 'user_permissions', 'groups']

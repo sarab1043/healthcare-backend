@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
+from .locationModel import Location
 
 
 class CustomUserManager(BaseUserManager):
@@ -41,7 +42,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     profilepic = models.ImageField(upload_to='images', blank=True, null=True)  
     contactnumber = models.CharField(max_length=15, null=True, blank=True)
+    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
 
+    Roles = [
+        ('Doctor', 'Doctor'),
+        ('Patient', 'Patient'),
+        ('', 'None')  # Added None as an option
+    ]
+    role = models.CharField(max_length=8, choices=Roles, default='', null=True, blank=True)
     GENDER_CHOICES = [
         ('Male', 'Male'),
         ('Female', 'Female'),

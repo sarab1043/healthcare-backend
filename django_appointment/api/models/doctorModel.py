@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
-from .locationModel import Location
 from timezone_field import TimeZoneField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -16,7 +15,7 @@ class DoctorProfile(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     qualification = models.TextField(null=True, blank=True)
     specializations = models.ManyToManyField(Specialization, null=True, blank=True)
-    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
+   
     appointment_slot_duration = models.IntegerField(default=45)
 
 class TimeSlot(models.Model):
