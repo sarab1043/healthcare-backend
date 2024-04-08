@@ -4,7 +4,7 @@ from django.conf import settings
 from .locationModel import Location
 from .appointmentModel import Appointment
 from timezone_field import TimeZoneField
-
+from django.utils import timezone
 
 class PatientRecord(models.Model):
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE)
@@ -32,4 +32,6 @@ class PatientRecord(models.Model):
     patient_education = models.TextField(null=True, blank=True)
     plan_prognosis = models.TextField(null=True, blank=True)
     treatment_plan = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)  
+    updated_at = models.DateTimeField(auto_now=True)
 

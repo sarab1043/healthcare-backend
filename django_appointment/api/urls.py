@@ -49,7 +49,7 @@ urlpatterns = [
 
     path('patient/appointments/', PatientAppointmentView.as_view(), name="appointments-by-patient"),
     path('patient/records/', PatientRecordView.as_view(), name="patient-record"),
-    path('patient/records/<id>', PatientRecordByAptIdView.as_view(), name="patient-record-by-appointment-id"),
+    path('patient/records/<id>/', PatientRecordByAptIdView.as_view(), name="patient-record-by-appointment-id"),
 
     path('specializations/', SpecializationListView.as_view() , name='specializations')
 

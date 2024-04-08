@@ -31,7 +31,7 @@ class PatientRecordByAptIdView(APIView):
         """
         Get Appointment
         """
-        result = patientService.get_record_by_aptId(request, format=None)
+        result = patientService.get_record_by_aptId(request, id, format=None)
         return Response(result, status=status.HTTP_200_OK)
 
 
