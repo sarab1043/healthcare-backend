@@ -147,6 +147,27 @@ class PatientService(PatientBaseService):
             print(e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."})
 
+    def get_record_by_aptId(self, request, id, format=None):
+        try:
+            # Retrieve the appointment
+            appointment = Appointment.objects.get(id=id)
+
+            if request.user.email == appointment.patientEmail or request.user.email == appointment.doctor.user.email:
+                # Check if the appointment is confirmed or rescheduled
+               record_obj = PatientRecord.objects.get(appointment=id)
+               serializer = GetAppointmentSerializer(record_obj, many=True)
+               return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
+            else:
+                return {"data": None, "status": status.HTTP_403_FORBIDDEN, "error": "You are not authorized to access this appointment."}
+
+        except Appointment.DoesNotExist:
+            return {"data": None, "status": status.HTTP_404_NOT_FOUND, "error": "Appointment not found."}
+
+        except Exception as e:
+            print(e)
+            return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."}
+
+        
 
 def is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time):
     try:
