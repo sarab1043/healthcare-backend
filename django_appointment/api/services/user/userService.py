@@ -140,8 +140,11 @@ class UserService(UserBaseService):
     def get_profile(self, request, format=None):
         try:
             user = CustomUser.objects.get(email = request.user)
-            doctor_profile = DoctorProfile.objects.get(user = user)
-            serializer = DoctorProfileSerializer(doctor_profile, context={'request': request})
+            if (user.role == "Doctor"):
+                doctor_obj = DoctorProfile.objects.get(user = user.id)
+                serializer = DoctorProfileSerializer(doctor_obj, context={'request': request})
+            if (user.role == "Patient"):
+                serializer = UserLoginSerializer(user, context={'request': request})
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile fetched successfully"})
         except User.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User not found"})
