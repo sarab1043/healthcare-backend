@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from api.models  import *
-
+# from api.
 class LocationSerializers(serializers.ModelSerializer):
     
     class Meta:
@@ -24,16 +24,6 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         model = DoctorProfile
         fields = "__all__"
 
-class DoctorProfileSerializer(serializers.ModelSerializer):
-    user = UserLoginSerializer(read_only=True)  
-    specializations = SpecializationSerializer(read_only=True, many=True)    
-
-    class Meta:
-        model = DoctorProfile
-        fields = "__all__"
-    
-
-
 class TimeSlotSerializer(serializers.ModelSerializer):
     # start_time_12h = serializers.SerializerMethodField()
     # end_time_12h = serializers.SerializerMethodField()
@@ -46,7 +36,8 @@ class TimeSlotSerializer(serializers.ModelSerializer):
     #     return obj.start_time.strftime("%I:%M %p")  # Format start time in 12-hour format
     
     # def get_end_time_12h(self, obj):
-    #     return obj.end_time.strftime("%I:%M %p")
+    #     return obj.end_time.strftime("%I:%M %p")'
+        
 
 class DoctorAvailabilitySerializer(serializers.ModelSerializer):
     timeslot = TimeSlotSerializer(read_only=True, many=True)
@@ -62,8 +53,16 @@ class DoctorAvailabilitySerializer(serializers.ModelSerializer):
     #     return obj.default_working_start_time.strftime("%I:%M %p")  # Format start time in 12-hour format
     
     # def get_default_working_end_time(self, obj):
-    #     return obj.default_working_end_time.strftime("%I:%M %p")
-    
+    #     return obj.default_working_end_time.strftime("%I:%M %p")'
+        
+class DoctorProfileSerializer(serializers.ModelSerializer):
+    user = UserLoginSerializer(read_only=True)  
+    specializations = SpecializationSerializer(read_only=True, many=True)    
+    availabilities = DoctorAvailabilitySerializer(source='doctoravailability_set', many=True, read_only=True)
+
+    class Meta:
+        model = DoctorProfile
+        fields = "__all__"
     
 class UpdateWeeklyAvailabilitySerializer(serializers.ModelSerializer):
     timeslot = TimeSlotSerializer(read_only=True, many=True)
