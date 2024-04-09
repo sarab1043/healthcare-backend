@@ -27,7 +27,6 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 class DoctorProfileSerializer(serializers.ModelSerializer):
     user = UserLoginSerializer(read_only=True)  
     specializations = SpecializationSerializer(read_only=True, many=True)    
-    location = LocationSerializers(read_only=True)
 
     class Meta:
         model = DoctorProfile

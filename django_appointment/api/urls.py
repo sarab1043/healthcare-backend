@@ -36,7 +36,7 @@ urlpatterns = [
     path('validate/<token>/', ValidateTokenView.as_view(), name="validatetoken"),
     path('logout/', LogoutView.as_view(), name="logout"),
 
-    path('doctor/profile/', ProfileView.as_view(), name="profile"),
+    path('profile/', ProfileView.as_view(), name="profile"),
     path('doctor/availability/', AvailabilityView.as_view(), name="availability"),
     path('doctor/availability/weekly-hours/', WeeklyHoursAvailabilityView.as_view(), name="update-weekly-hours"),
     path('doctor/availability/date-specific/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),

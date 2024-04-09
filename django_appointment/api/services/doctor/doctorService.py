@@ -32,14 +32,12 @@ class DoctorService(DoctorBaseService):
             country = request.query_params.get('country')
 
             doctors = DoctorProfile.objects.all()
-
             if specialization:
                 doctors = doctors.filter(specializations__name__iexact=specialization)
             if city:
-                doctors = doctors.filter(location__city__iexact=city)
+                doctors = doctors.filter(user__location__city__iexact=city)
             if country:
-                doctors = doctors.filter(location__country__iexact=country)
-
+                doctors = doctors.filter(user__location__country__iexact=country)
             serializer = DoctorProfileSerializer(doctors, many=True)
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Doctors fetched successfully"})
 
