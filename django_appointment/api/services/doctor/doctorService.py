@@ -373,7 +373,7 @@ class DoctorService(DoctorBaseService):
     def get_doctor_by_id(self, request, id, format=None): 
         try:
             print(id)
-            doctor_profile = DoctorProfile.objects.get(id = id)
+            doctor_profile = DoctorProfile.objects.get(user = id)
             serializer = DoctorProfileSerializer(doctor_profile)
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Doctor fetched successfully"})
 
