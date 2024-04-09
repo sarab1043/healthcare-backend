@@ -96,3 +96,14 @@ class UpdateAppointmentDurationView(APIView):
     def  put(self, request, format=None):
         result = doctorService.update_appointment_duration(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
+
+
+class DoctorByIdView(APIView):
+    permission_classes = (AllowAny,)
+    """
+    Get Doctor By Id
+    """
+
+    def get(self, request, id, format=None):
+        result = doctorService.get_doctor_by_id(request, id, format=None)
+        return Response(result, status=status.HTTP_200_OK)

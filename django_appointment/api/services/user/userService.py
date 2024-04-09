@@ -143,7 +143,7 @@ class UserService(UserBaseService):
             if (user.role == "Doctor"):
                 doctor_obj = DoctorProfile.objects.get(user = user.id)
                 serializer = DoctorProfileSerializer(doctor_obj, context={'request': request})
-            if (user.role == "Patient"):
+            else:
                 serializer = UserLoginSerializer(user, context={'request': request})
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile fetched successfully"})
         except User.DoesNotExist:

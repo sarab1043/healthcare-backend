@@ -368,3 +368,18 @@ class DoctorService(DoctorBaseService):
         except Exception as e:
             print(e)
             return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
+    
+
+    def get_doctor_by_id(self, request, id, format=None): 
+        try:
+            print(id)
+            doctor_profile = DoctorProfile.objects.get(id = id)
+            serializer = DoctorProfileSerializer(doctor_profile)
+            return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Doctor fetched successfully"})
+
+        except DoctorProfile.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_401_UNAUTHORIZED, "error": "Doctor not found"})
+
+        except Exception as e:
+            print("Error:", e)
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
