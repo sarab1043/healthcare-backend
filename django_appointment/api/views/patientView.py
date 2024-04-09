@@ -25,15 +25,26 @@ class PatientAppointmentView(APIView):
         result = patientService.create_appointment(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
 
+class PatientRecordByAptIdView(APIView):
 
+    def get(self, request, id, format=None):
+        """
+        Get Appointment
+        """
+        result = patientService.get_record_by_aptId(request, id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+   
+    
 class PatientRecordView(APIView):
 
-    # def get(self, request, format=None):
-    #     """
-    #     Get PatientRecord
-    #     """
-    #     result = patientService.get_patient_record(request, format=None)
-    #     return Response(result, status=status.HTTP_200_OK)
+    def get(self, request, format=None):
+        """
+        Get PatientRecord
+        """
+        result = patientService.get_patient_record(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)
 
 
     def post(self, request, format=None):

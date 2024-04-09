@@ -85,11 +85,10 @@ class UserService(UserBaseService):
             missing_params = [param for param in required_params if param not in request.data]
 
             if CustomUser.objects.filter(email=email).exists():
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist"})
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist",  "existing_email": 'true'})
 
             if missing_params:
-                # return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}", "redirectUrl": "/missing-params"});
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
             user = CustomUser.objects.create_user(email=email, password=password, role=role)
             if (role == 'Doctor'):
                 if not specializations or not qualification or not country or not city:
@@ -125,8 +124,8 @@ class UserService(UserBaseService):
                     location = Location.objects.get(country__iexact = country,city__iexact = city)
                 else:
                     location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
-            user.location = location
-            user.save()
+                user.location = location
+                user.save()
             serializer = UserLoginSerializer(user)
             refresh = RefreshToken.for_user(user)
             data = serializer.data
@@ -140,8 +139,11 @@ class UserService(UserBaseService):
     def get_profile(self, request, format=None):
         try:
             user = CustomUser.objects.get(email = request.user)
-            doctor_profile = DoctorProfile.objects.get(user = user)
-            serializer = DoctorProfileSerializer(doctor_profile, context={'request': request})
+            if (user.role == "Doctor"):
+                doctor_obj = DoctorProfile.objects.get(user = user.id)
+                serializer = DoctorProfileSerializer(doctor_obj, context={'request': request})
+            else:
+                serializer = UserLoginSerializer(user, context={'request': request})
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile fetched successfully"})
         except User.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User not found"})
@@ -180,6 +182,7 @@ class UserService(UserBaseService):
 
     def google_login(self, request, format=None):
         try:
+            role = request.data.get['role']
             access_token = request.data.get('access_token')
             if not access_token:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Access token required"})
@@ -196,9 +199,7 @@ class UserService(UserBaseService):
                     fullname=google_user_data['name']
                     provider = "Google"
                     user = CustomUser.objects.filter(email=email)
-                    print(user)
                     if user.exists():
-                        print("user exists")
                         user = authenticate(request, email=email, password=settings.SOCIAL_AUTH_PASSWORD)
                         if user is not None:
                             login(request, user)
@@ -215,22 +216,22 @@ class UserService(UserBaseService):
                         user.fullname = first_name  + ' '+ last_name
                         user.provider = provider
                         user.save()
-                        doctorprofile = DoctorProfile.objects.create(user=user)
+
+                        # if not role:
+
+                        # doctorprofile = DoctorProfile.objects.create(user=user)
                         serializer = UserLoginSerializer(user)
                         refresh = AccessToken.for_user(user)
                         data = serializer.data
-                        print("data",data)
                         data['token'] = str(refresh)
                         return ({"data": data, "status": status.HTTP_201_CREATED, "success": "User created successfully"})
 
                 except Exception as e:
-                    print(e)
                     return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token in invalid or has expired"})
             else:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token in invalid or has expired"})
 
         except Exception as e:
-            print(e, "eeee")
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
     def user_logout(self, request, format=None):

@@ -47,9 +47,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     Roles = [
         ('Doctor', 'Doctor'),
         ('Patient', 'Patient'),
-        ('', 'None')  # Added None as an option
+        ('None', 'None')  # Added None as an option
     ]
-    role = models.CharField(max_length=8, choices=Roles, default='', null=True, blank=True)
+    role = models.CharField(max_length=8, choices=Roles, default='None', null=True, blank=True)
     GENDER_CHOICES = [
         ('Male', 'Male'),
         ('Female', 'Female'),

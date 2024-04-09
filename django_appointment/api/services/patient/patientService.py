@@ -66,7 +66,7 @@ class PatientService(PatientBaseService):
             if not slot_available:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "success": "Doctor not available on this time slot"})
 
-            if not DoctorProfile.objects.filter(user=doctor, location=loc_obj, specializations__name__iexact=specialization).exists():
+            if not DoctorProfile.objects.filter(user=doctor, specializations__name__iexact=specialization).exists() and CustomUser.objects.filter(id = doctor, location=loc_obj):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
 
             if Appointment.objects.filter(patientEmail = patientEmail, date=date, start_time__lt=end_time, end_time__gt=start_time, doctor=doctor_obj).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
@@ -88,7 +88,10 @@ class PatientService(PatientBaseService):
 
         except DoctorProfile.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
-
+        
+        except Specialization.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found with this specialization"})
+        
         except DoctorAvailability.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor is not available on this time"})
         except Exception as e:
@@ -144,6 +147,27 @@ class PatientService(PatientBaseService):
             print(e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."})
 
+    def get_record_by_aptId(self, request, id, format=None):
+        try:
+            # Retrieve the appointment
+            appointment = Appointment.objects.get(id=id)
+
+            if request.user.email == appointment.patientEmail or request.user.email == appointment.doctor.user.email:
+                # Check if the appointment is confirmed or rescheduled
+               record_obj = PatientRecord.objects.get(appointment=id)
+               serializer = PatientRecordSerializers(record_obj)
+               return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
+            else:
+                return {"data": None, "status": status.HTTP_403_FORBIDDEN, "error": "You are not authorized to access this appointment."}
+
+        except Appointment.DoesNotExist:
+            return {"data": None, "status": status.HTTP_404_NOT_FOUND, "error": "Appointment not found."}
+
+        except Exception as e:
+            print(e)
+            return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."}
+
+        
 
 def is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time):
     try:
