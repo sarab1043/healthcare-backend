@@ -68,7 +68,7 @@ class DoctorService(DoctorBaseService):
             serializer = DoctorAvailabilitySerializer(availability_obj, many=True)
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Doctor availability fetched successfully"})
 
-        except doctor_profile.DoesNotExist:
+        except DoctorProfile.DoesNotExist:
             return ({"data": None, "status": status.HTTP_401_UNAUTHORIZED, "error": "Doctor not found"})
 
         except Exception as e:

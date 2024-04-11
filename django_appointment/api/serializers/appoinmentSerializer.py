@@ -22,7 +22,7 @@ class GetAppointmentSerializer(serializers.ModelSerializer):
     specialization = SpecializationSerializer(read_only=True)  
     location = LocationSerializers(read_only=True)
     day = DayOfWeekField()
-    rescheduled_day = DayOfWeekField()
+    # rescheduled_day = DayOfWeekField()
 
     class Meta:
         model = Appointment

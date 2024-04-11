@@ -38,7 +38,7 @@ urlpatterns = [
 
     path('profile/', ProfileView.as_view(), name="profile"),
     path('doctor/availability/', AvailabilityView.as_view(), name="availability"),
-    path('doctor/<id>/', DoctorByIdView.as_view(), name="get-doctor-by-id"),
+    path('doctor/<int:id>/', DoctorByIdView.as_view(), name="get-doctor-by-id"),
     path('doctor/availability/weekly-hours/', WeeklyHoursAvailabilityView.as_view(), name="update-weekly-hours"),
     path('doctor/availability/date-specific/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
     path('doctor/availability/date-specific/<id>/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
