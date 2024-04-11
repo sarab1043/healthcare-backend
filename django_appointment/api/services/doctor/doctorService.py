@@ -60,7 +60,7 @@ class DoctorService(DoctorBaseService):
             print("Error:", e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
-    def get_availability(self, request, format=None): 
+    def get_doctor_working_days(self, request, format=None): 
         try:
             user = CustomUser.objects.get(email=request.user)
             doctor_profile = DoctorProfile.objects.get(user=user)
