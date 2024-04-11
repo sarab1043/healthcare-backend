@@ -156,23 +156,23 @@ class UserService(UserBaseService):
         try:
             print(request.data)
             user = CustomUser.objects.get(email=request.user)
-            doctor_profile = DoctorProfile.objects.get(user=user)
 
-            user_serializer = UserLoginSerializer(user, data=request.data, partial=True)
-            if user_serializer.is_valid():
-                user_serializer.save()
+            serializer = UserLoginSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
             else:
                 return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
-            doctor_profile_serializer = UpdateProfileSerializer(doctor_profile, data=request.data, partial=True)
-            if doctor_profile_serializer.is_valid():
-                print("valid")
-                doctor_profile_serializer.save()
-                print("doctor_profile_serializer", doctor_profile_serializer.data)
-            else:
-                return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+            if (user.role == "Doctor"):
+                doctor_profile = DoctorProfile.objects.get(user=user)
+                serializer = UpdateProfileSerializer(doctor_profile, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    print("doctor_profile_serializer", serializer.data)
+                else:
+                    return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
-            return ({"data": doctor_profile_serializer.data, "status": status.HTTP_200_OK, "success": "Profile updated successfully"})
+            return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile updated successfully"})
 
         except User.DoesNotExist:
             return ({"data": None, "status": status.HTTP_401_UNAUTHORIZED, "error": "User not found"})
