@@ -37,7 +37,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name="logout"),
 
     path('profile/', ProfileView.as_view(), name="profile"),
-    path('doctor/availability/', AvailabilityView.as_view(), name="availability"),
+    path('doctor/working-days/', DoctorWorkingDaysView.as_view(), name="get-doctor-working-days"),
     path('doctor/<int:id>/', DoctorByIdView.as_view(), name="get-doctor-by-id"),
     path('doctor/availability/weekly-hours/', WeeklyHoursAvailabilityView.as_view(), name="update-weekly-hours"),
     path('doctor/availability/date-specific/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
