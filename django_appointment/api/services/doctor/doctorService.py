@@ -65,7 +65,7 @@ class DoctorService(DoctorBaseService):
             user = CustomUser.objects.get(email=request.user)
             doctor_profile = DoctorProfile.objects.get(user=user)
             availability_obj = DoctorAvailability.objects.filter(doctor=doctor_profile)
-            serializer = DoctorAvailabilitySerializer(availability_obj, many=True)
+            serializer = DoctorWorkingDaysSerializer(availability_obj, many=True)
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Doctor availability fetched successfully"})
 
         except DoctorProfile.DoesNotExist:
@@ -93,28 +93,31 @@ class DoctorService(DoctorBaseService):
             if (apt_status == 'Confirmed') and (appointment.status != 'Pending'):
                 return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "This appointment may already be confirmed"}
 
+            if (apt_status == 'Rescheduled') and (appointment.status != 'Cancelled'):
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "This appointment is cancelled"}
+
             current_time = datetime.now()
             appointment_start_time = datetime.combine(appointment.date, appointment.start_time)
             three_hours_behind = appointment_start_time - timedelta(hours=3)
-            rescheduled_start_time_str = request.data.get('start_time')
-            rescheduled_end_time_str = request.data.get('end_time')
-
-            # Convert string representations to datetime.time objects
-            rescheduled_start_time = datetime.strptime(rescheduled_start_time_str, '%H:%M:%S').time()
-            rescheduled_end_time = datetime.strptime(rescheduled_end_time_str, '%H:%M:%S').time()
-            rescheduled_date = request.data.get('date')
-
-            start_time = appointment.start_time
-            end_time = appointment.end_time
-            date = appointment.date
-            day_of_week = appointment.day
+           
 
             if (current_time >= three_hours_behind):
                 if apt_status not in ['Rescheduled', 'Cancelled']:
                     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "The time limit to update the appointment has exceeded. You can only reschedule or cancel the appointment"}
 
-            if apt_status == 'Rescheduled' or (apt_status == 'Confirmed' and appointment.status == 'Pending'):
+            if apt_status == 'Rescheduled':
+                rescheduled_start_time_str = request.data.get('start_time')
+                rescheduled_end_time_str = request.data.get('end_time')
 
+                # Convert string representations to datetime.time objects
+                rescheduled_start_time = datetime.strptime(rescheduled_start_time_str, '%H:%M:%S').time()
+                rescheduled_end_time = datetime.strptime(rescheduled_end_time_str, '%H:%M:%S').time()
+                rescheduled_date = request.data.get('date')
+
+                start_time = appointment.start_time
+                end_time = appointment.end_time
+                date = appointment.date
+                day_of_week = appointment.day
                 if apt_status == 'Rescheduled' and not rescheduled_start_time and not rescheduled_end_time and not rescheduled_date:
                     return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Resheduled start and end time required"}
                 
@@ -383,3 +386,31 @@ class DoctorService(DoctorBaseService):
         except Exception as e:
             print("Error:", e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+    
+
+    def get_doctor_availability_by_date(self, request, docid, date, format=None):
+        try:
+            doctor_profile = DoctorProfile.objects.get(user=docid)
+            doc_avail_objs = DoctorAvailability.objects.filter(doctor=doctor_profile, date=date)
+
+            # Fetch the appointment for the given doctor and date
+            appointment = Appointment.objects.filter(doctor=doctor_profile, date=date, status__in=["Confirmed", "Rescheduled"])
+            adjusted_availability= []
+            for apt in appointment:
+                print(apt)
+                    # Add the adjusted availability slot to the list
+                adjusted_availability.append({
+                    "start_time": apt.start_time,
+                    "end_time": apt.end_time
+                })
+
+            return {"data": adjusted_availability, "status": status.HTTP_200_OK, "success": "Doctor Availability fetched successfully"}
+
+        except DoctorProfile.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_401_UNAUTHORIZED, "error": "Doctor not found"})
+
+        except Exception as e:
+            print("Error:", e)
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+
+
