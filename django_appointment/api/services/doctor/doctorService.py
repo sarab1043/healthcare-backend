@@ -93,7 +93,7 @@ class DoctorService(DoctorBaseService):
             if (apt_status == 'Confirmed') and (appointment.status != 'Pending'):
                 return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "This appointment may already be confirmed"}
 
-            if (apt_status == 'Rescheduled') and (appointment.status != 'Cancelled'):
+            if (apt_status == 'Rescheduled') and (appointment.status == 'Cancelled'):
                 return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "This appointment is cancelled"}
 
             current_time = datetime.now()
