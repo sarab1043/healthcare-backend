@@ -41,7 +41,7 @@ class DoctorWorkingDaysView(APIView):
 
     def get(self, request, format=None):
         """
-        Get Doctor's Available Hours
+        Get Doctor's Working Hours
         """
         result = doctorService.get_doctor_working_days(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
@@ -106,4 +106,15 @@ class DoctorByIdView(APIView):
 
     def get(self, request, id, format=None):
         result = doctorService.get_doctor_by_id(request, id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class DoctorAvailabilityByDateView(APIView):
+    permission_classes = (AllowAny,)
+    """
+    Get Doctor Availability By Date
+    """
+
+    def get(self, request, docid, date, format=None):
+        result = doctorService.get_doctor_availability_by_date(request, docid, date, format=None)
         return Response(result, status=status.HTTP_200_OK)
