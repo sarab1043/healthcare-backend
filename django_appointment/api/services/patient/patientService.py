@@ -76,15 +76,15 @@ class PatientService(PatientBaseService):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor is already booked on this time slot"})
 
            
-            # serializer = CreateAppointmentSerializer(data=request.data)
-            # if serializer.is_valid ():
-            #     serializer.validated_data['location'] = loc_obj
-            #     serializer.validated_data['specialization'] = specialization_obj
-            #     serializer.validated_data['doctor'] = doctor_obj
-            #     serializer.save ()
-            #     data = serializer.data
-            #     return ({"data": data, "status": status.HTTP_201_CREATED, "success": "Appointment saved"})
-            # print(serializer.errors)
+            serializer = CreateAppointmentSerializer(data=request.data)
+            if serializer.is_valid ():
+                serializer.validated_data['location'] = loc_obj
+                serializer.validated_data['specialization'] = specialization_obj
+                serializer.validated_data['doctor'] = doctor_obj
+                serializer.save ()
+                data = serializer.data
+                return ({"data": data, "status": status.HTTP_201_CREATED, "success": "Appointment saved"})
+            print(serializer.errors)
 
         except DoctorProfile.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
