@@ -39,7 +39,7 @@ class TimeSlotSerializer(serializers.ModelSerializer):
     #     return obj.end_time.strftime("%I:%M %p")'
         
 
-class DoctorAvailabilitySerializer(serializers.ModelSerializer):
+class DoctorWorkingDaysSerializer(serializers.ModelSerializer):
     timeslot = TimeSlotSerializer(read_only=True, many=True)
     day_of_week = serializers.CharField(source='get_day_of_week_display')
     # default_working_start_time = serializers.SerializerMethodField()
@@ -58,7 +58,7 @@ class DoctorAvailabilitySerializer(serializers.ModelSerializer):
 class DoctorProfileSerializer(serializers.ModelSerializer):
     user = UserLoginSerializer(read_only=True)  
     specializations = SpecializationSerializer(read_only=True, many=True)    
-    availabilities = DoctorAvailabilitySerializer(source='doctoravailability_set', many=True, read_only=True)
+    working_days = DoctorWorkingDaysSerializer(source='doctoravailability_set', many=True, read_only=True)
 
     class Meta:
         model = DoctorProfile

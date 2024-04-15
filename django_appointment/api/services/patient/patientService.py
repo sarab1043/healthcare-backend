@@ -180,7 +180,8 @@ def is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time)
         
         date_specific_availability = DoctorAvailability.objects.filter(doctor=doctor_obj, date=date)
         if date_specific_availability:
-            if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date).filter( Q(timeslot__isnull=True, available=False) | ~Q(available=True, timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time)).exists():
+            # if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date).filter( Q(timeslot__isnull=True, available=False) | Q(available=True, timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time)).exists():
+            if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date).filter( Q(timeslot__isnull=True, available=False) | Q(available=True, timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time)).exists():
                 return False
             else:
                 return True

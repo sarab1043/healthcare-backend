@@ -41,12 +41,14 @@ urlpatterns = [
     path('doctor/<int:id>/', DoctorByIdView.as_view(), name="get-doctor-by-id"),
     path('doctor/availability/weekly-hours/', WeeklyHoursAvailabilityView.as_view(), name="update-weekly-hours"),
     path('doctor/availability/date-specific/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
-    path('doctor/availability/date-specific/<id>/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
+    path('doctor/availability/date-specific/<int:id>/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
     path('doctors/', GetAllDoctorsView.as_view(), name="get-all-doctors"),
     path('doctors/search/', SearchDoctors.as_view(), name='search-doctors'),
     path('doctor/appointments/', DoctorAppointmentView.as_view( ), name='get-all-appointments'),
     path('doctor/appointments/<id>/', DoctorAppointmentByIdView.as_view( ), name='get-appointments-by-id'),
     path('doctor/appointment-duration/', UpdateAppointmentDurationView.as_view(), name='update-appointment-duration'),
+    path("doctor/availability/<int:docid>/<str:date>/", DoctorAvailabilityByDateView.as_view(), name="get-doctor-availability-by-date"),
+
 
     path('patient/appointments/', PatientAppointmentView.as_view(), name="appointments-by-patient"),
     path('patient/records/', PatientRecordView.as_view(), name="patient-record"),
