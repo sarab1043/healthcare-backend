@@ -73,18 +73,18 @@ class PatientService(PatientBaseService):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "You already have an appointment in between this slot"})
             
             if Appointment.objects.filter(doctor=doctor_obj, date=date, start_time__lt=end_time, end_time__gt=start_time).exclude(Q(status="Cancelled") | Q(status="Completed")).exists():
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not available on this time slot"})
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor is already booked on this time slot"})
 
            
-            serializer = CreateAppointmentSerializer(data=request.data)
-            if serializer.is_valid ():
-                serializer.validated_data['location'] = loc_obj
-                serializer.validated_data['specialization'] = specialization_obj
-                serializer.validated_data['doctor'] = doctor_obj
-                serializer.save ()
-                data = serializer.data
-                return ({"data": data, "status": status.HTTP_201_CREATED, "success": "Appointment saved"})
-            print(serializer.errors)
+            # serializer = CreateAppointmentSerializer(data=request.data)
+            # if serializer.is_valid ():
+            #     serializer.validated_data['location'] = loc_obj
+            #     serializer.validated_data['specialization'] = specialization_obj
+            #     serializer.validated_data['doctor'] = doctor_obj
+            #     serializer.save ()
+            #     data = serializer.data
+            #     return ({"data": data, "status": status.HTTP_201_CREATED, "success": "Appointment saved"})
+            # print(serializer.errors)
 
         except DoctorProfile.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found"})
@@ -179,9 +179,12 @@ def is_slot_available(self, doctor_obj, date, day_of_week, start_time, end_time)
             return False
         
         date_specific_availability = DoctorAvailability.objects.filter(doctor=doctor_obj, date=date)
+
         if date_specific_availability:
+            if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date,  timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time, available=False):
+                return False
             # if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date).filter( Q(timeslot__isnull=True, available=False) | Q(available=True, timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time)).exists():
-            if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date).filter( Q(timeslot__isnull=True, available=False) | Q(available=True, timeslot__start_time__lte=start_time, timeslot__end_time__gte=end_time)).exists():
+            if DoctorAvailability.objects.filter(doctor=doctor_obj, date=date, timeslot__isnull=True, available=False):
                 return False
             else:
                 return True
