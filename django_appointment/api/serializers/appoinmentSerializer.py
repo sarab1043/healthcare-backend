@@ -49,4 +49,7 @@ class UpdateAppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields= "__all__"
 
-    
+class DoctorBookedSlotsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Appointment
+        fields= ('date','start_time','end_time',)

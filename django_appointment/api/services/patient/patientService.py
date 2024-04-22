@@ -146,6 +146,36 @@ class PatientService(PatientBaseService):
         except Exception as e:
             print(e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."})
+        
+    def update_patient_record(self, request, format=None):
+        try:
+            if not request.data.get('appointment'):
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "appointment required"})
+
+            doctor_obj = DoctorProfile.objects.get(user=request.user.id)
+            print(doctor_obj)
+            print(request.data['appointment'])
+            appointment = Appointment.objects.get(doctor=doctor_obj, id=request.data['appointment'], status__in=['Confirmed', 'Rescheduled'])
+            print(appointment)
+            print(PatientRecord.objects.filter(appointment=appointment))
+            # if PatientRecord.objects.filter(appointment=appointment).exists():
+            #     return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Patient record already exists for this apointment."})
+
+            serializer = PatientRecordSerializers(data=request.data, partial = True)
+            if serializer.is_valid():
+                serializer.save()
+                return ({"data": None, "status": status.HTTP_201_CREATED, "success": "Patient record updated."})
+            print(serializer.errors)
+
+        except  DoctorProfile.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not found."})
+
+        except Appointment.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Appointment not found."})
+
+        except Exception as e:
+            print(e)
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."})
 
     def get_record_by_aptId(self, request, id, format=None):
         try:
@@ -154,7 +184,7 @@ class PatientService(PatientBaseService):
 
             if request.user.email == appointment.patientEmail or request.user.email == appointment.doctor.user.email:
                 # Check if the appointment is confirmed or rescheduled
-               record_obj = PatientRecord.objects.get(appointment=id)
+               record_obj = PatientRecord.objects.get(appointment=appointment)
                serializer = PatientRecordSerializers(record_obj)
                return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
             else:

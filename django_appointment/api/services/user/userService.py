@@ -183,10 +183,10 @@ class UserService(UserBaseService):
 
     def google_login(self, request, format=None):
         try:
-            role = request.data.get['role']
+            role = request.data.get('role')
             access_token = request.data.get('access_token')
-            if not access_token:
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Access token required"})
+            if not access_token or not role:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Access token and role required"})
 
             google_user_data = id_token.verify_oauth2_token(access_token, requests.Request())
             print(google_user_data)
@@ -216,6 +216,7 @@ class UserService(UserBaseService):
                         user.last_name = last_name
                         user.fullname = first_name  + ' '+ last_name
                         user.provider = provider
+                        user.role = role
                         user.save()
 
                         # if not role:
@@ -233,6 +234,7 @@ class UserService(UserBaseService):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token in invalid or has expired"})
 
         except Exception as e:
+            print(str(e))
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
     def user_logout(self, request, format=None):

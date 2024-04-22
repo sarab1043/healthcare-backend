@@ -53,3 +53,10 @@ class PatientRecordView(APIView):
         """
         result = patientService.create_patient_record(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
+    
+    def put(self, request, format=None):
+        """
+        Update PatientRecord
+        """
+        result = patientService.update_patient_record(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)

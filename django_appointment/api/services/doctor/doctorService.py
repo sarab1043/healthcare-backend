@@ -414,3 +414,38 @@ class DoctorService(DoctorBaseService):
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
 
+    def get_doctor_booked_slots(self, request, doc_id, format=None):
+        try:
+            user = CustomUser.objects.filter(id=doc_id).first()
+            if not user:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User not found."})
+
+            #getting day availablity time slots of doctor
+            doctor_unavailabile_slots = DoctorAvailability.objects.filter(doctor__user = user, available = False, day_of_week__isnull = True)
+
+            formatted_slots=[]
+            for doctor_unavailable_slot in doctor_unavailabile_slots:
+                slots= TimeSlotSerializer(doctor_unavailable_slot.timeslot.all(),many=True).data
+                for slot in slots:
+                    data = {
+                            "date": doctor_unavailable_slot.date.strftime("%Y-%m-%d"),
+                            "start_time": slot['start_time'],
+                            "end_time": slot['end_time']
+                            }
+                    formatted_slots.append(data)
+
+            appointments = Appointment.objects.filter(doctor__user=user).order_by('-created_at')
+            serializer = DoctorBookedSlotsSerializer(appointments, many=True)
+            serialized_data = serializer.data
+
+            if serialized_data:
+                formatted_slots.extend(serialized_data)
+                data = formatted_slots
+            else:
+                data = formatted_slots
+
+            return {"data": data, "status": status.HTTP_200_OK, "success": "Booked Slots fetched successfully"}
+
+        except Exception as e:
+            print("e", str(e))
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
