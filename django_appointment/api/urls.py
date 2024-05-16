@@ -37,6 +37,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name="logout"),
 
     path('profile/', ProfileView.as_view(), name="profile"),
+    # path('doctor/create-profile/', GoogleDoctorProfileView.as_view(), name="profile"),
     path('doctor/working-days/', DoctorWorkingDaysView.as_view(), name="get-doctor-working-days"),
     path('doctor/<int:id>/', DoctorByIdView.as_view(), name="get-doctor-by-id"),
     path('doctor/availability/weekly-hours/', WeeklyHoursAvailabilityView.as_view(), name="update-weekly-hours"),
@@ -51,8 +52,10 @@ urlpatterns = [
     path("doctor/booked-slots/<int:doc_id>/", DoctorBookedSlotsView.as_view(), name="get-doctor-booked-slots-by-id"),
 
     path('patient/appointments/', PatientAppointmentView.as_view(), name="appointments-by-patient"),
+    path('patient/appointment/<id>/', AppointmentRecordByAptIdView.as_view(), name="get-appointments-by-id"),
+    path('patient/record/<id>/', PatientRecordByAptIdView.as_view(), name="patient-record-by-appointment-id"),
     path('patient/records/', PatientRecordView.as_view(), name="patient-record"),
-    path('patient/records/<id>/', PatientRecordByAptIdView.as_view(), name="patient-record-by-appointment-id"),
+    path('patient/records/<int:pk>/', PatientRecordView.as_view(), name="patient-record"),
 
     path('specializations/', SpecializationListView.as_view() , name='specializations')
 

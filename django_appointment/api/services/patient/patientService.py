@@ -104,7 +104,9 @@ class PatientService(PatientBaseService):
 
     def get_appointments(self, request, format=None):
         try:
-            email = request.data.get('email')
+            email = request.GET.get('email')
+
+   
             if not email:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Email is required"})
 
@@ -113,6 +115,15 @@ class PatientService(PatientBaseService):
             serializer = GetAppointmentSerializer(appointments_obj, many=True)
             return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
 
+        except Exception as e:
+            print("e", e)
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+    def get_appointment_detail(self, request, pk, format=None):
+        try:
+            appointment = Appointment.objects.filter(id=pk).first()
+            serializer = GetAppointmentSerializer(appointment)
+            return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Appointment fetched successully"})
         except Exception as e:
             print("e", e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
@@ -147,7 +158,7 @@ class PatientService(PatientBaseService):
             print(e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong."})
         
-    def update_patient_record(self, request, format=None):
+    def update_patient_record(self, request, pk, format=None):
         try:
             if not request.data.get('appointment'):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "appointment required"})
@@ -156,12 +167,14 @@ class PatientService(PatientBaseService):
             print(doctor_obj)
             print(request.data['appointment'])
             appointment = Appointment.objects.get(doctor=doctor_obj, id=request.data['appointment'], status__in=['Confirmed', 'Rescheduled'])
-            print(appointment)
+            print(appointment,"asdfasdfasfasdfsdfdsf")
             print(PatientRecord.objects.filter(appointment=appointment))
+            patient_record = PatientRecord.objects.filter(appointment=appointment, id = pk).first()
+
             # if PatientRecord.objects.filter(appointment=appointment).exists():
             #     return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Patient record already exists for this apointment."})
 
-            serializer = PatientRecordSerializers(data=request.data, partial = True)
+            serializer = PatientRecordSerializers(instance=patient_record, data=request.data, partial = True)
             if serializer.is_valid():
                 serializer.save()
                 return ({"data": None, "status": status.HTTP_201_CREATED, "success": "Patient record updated."})

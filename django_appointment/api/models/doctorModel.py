@@ -7,6 +7,7 @@ from django.dispatch import receiver
 
 class Specialization(models.Model):
     name = models.CharField(max_length=200)
+    image = models.FileField(upload_to='specializations',null=True, blank=True)
 
     def __str__(self):
         return self.name

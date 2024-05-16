@@ -50,6 +50,11 @@ class UpdateAppointmentSerializer(serializers.ModelSerializer):
         fields= "__all__"
 
 class DoctorBookedSlotsSerializer(serializers.ModelSerializer):
+    available = serializers.BooleanField(default=False)
+    day = serializers.SerializerMethodField()
     class Meta:
         model = Appointment
-        fields= ('date','start_time','end_time',)
+        fields= ('date','start_time','end_time','day', 'available')
+
+    def get_day(self, obj):
+        return obj.DAY_CHOICES[obj.day][1]

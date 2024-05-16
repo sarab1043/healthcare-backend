@@ -420,21 +420,39 @@ class DoctorService(DoctorBaseService):
             if not user:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User not found."})
 
-            #getting day availablity time slots of doctor
-            doctor_unavailabile_slots = DoctorAvailability.objects.filter(doctor__user = user, available = False, day_of_week__isnull = True)
+            # getting day availablity time slots of doctor
+            doctor_unavailabile_slots = DoctorAvailability.objects.filter(
+                doctor__user=user)
 
-            formatted_slots=[]
+            formatted_slots = []
             for doctor_unavailable_slot in doctor_unavailabile_slots:
-                slots= TimeSlotSerializer(doctor_unavailable_slot.timeslot.all(),many=True).data
-                for slot in slots:
+                slots = TimeSlotSerializer(
+                    doctor_unavailable_slot.timeslot.all(), many=True).data
+                if not slots:
                     data = {
-                            "date": doctor_unavailable_slot.date.strftime("%Y-%m-%d"),
-                            "start_time": slot['start_time'],
-                            "end_time": slot['end_time']
-                            }
+                        "date": "",
+                        "start_time": doctor_unavailable_slot.default_working_start_time,
+                        "end_time": doctor_unavailable_slot.default_working_end_time,
+                        "day": doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1],
+                        "available" : doctor_unavailable_slot.available
+                    }
                     formatted_slots.append(data)
+                else:
+                    for slot in slots:
+                        date = doctor_unavailable_slot.date.strftime("%Y-%m-%d") if doctor_unavailable_slot.date else ""
+                        day = doctor_unavailable_slot.date.strftime("%A") if doctor_unavailable_slot.date else doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1]
 
-            appointments = Appointment.objects.filter(doctor__user=user).order_by('-created_at')
+                        data = {
+                            "date": date,
+                            "start_time": slot['start_time'],
+                            "end_time": slot['end_time'],
+                            "day": day,
+                            "available" : doctor_unavailable_slot.available
+                        }
+                        formatted_slots.append(data)
+
+            appointments = Appointment.objects.filter(
+                doctor__user=user).order_by('-created_at')
             serializer = DoctorBookedSlotsSerializer(appointments, many=True)
             serialized_data = serializer.data
 
@@ -444,8 +462,80 @@ class DoctorService(DoctorBaseService):
             else:
                 data = formatted_slots
 
-            return {"data": data, "status": status.HTTP_200_OK, "success": "Booked Slots fetched successfully"}
+            return {"data": data, "status": status.HTTP_200_OK, "success": "Booked & Unavailable Slots fetched successfully"}
 
         except Exception as e:
             print("e", str(e))
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+    def google_doctor_profile(self, request, format=None):
+        try:
+
+            if DoctorProfile.objects.filter(user = request.user).exists():
+                print(request.data)
+                user = CustomUser.objects.get(email=request.user)
+                # print(user , type(user))
+                serializer = UserLoginSerializer(user, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                else:
+                    print(serializer.errors)
+                    return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+
+                if (user.role == "Doctor"):
+                    doctor_profile = DoctorProfile.objects.get(user=user)
+                    serializer = UpdateProfileSerializer(doctor_profile, data=request.data, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        print("doctor_profile_serializer", serializer.data)
+                    else:
+                        print(serializer.errors)
+                        return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+
+                return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile updated successfully"})
+
+            country = request.data.get('country')
+            city = request.data.get('city')
+            qualification = request.data.get('qualification')
+            specializations = request.data.get('specializations')
+            contactnumber = request.data.get('contactnumber')
+    
+
+            if not specializations or not qualification or not country or not city:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations and qualifications are required."})
+
+            specialization_ids = [spec_obj.id for spec_obj in [Specialization.objects.filter(name__iexact=specialization_name).first() for specialization_name in specializations] if spec_obj is not None]
+            print(specialization_ids, 'specialization_ids')
+            if not specialization_ids:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations do not found"})
+            
+            user = CustomUser.objects.filter(id = request.user.id).first()
+            with transaction.atomic():
+                doctorprofile = DoctorProfile.objects.create(user=user, qualification=qualification)
+                doctorprofile.specializations.set(specialization_ids)
+                
+                for day in range(0, 5):  # Monday to Friday
+                    doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
+                for day in range(5, 7):  # Monday to Friday
+                    doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day, available=False)
+
+                if contactnumber:
+                    doctorprofile.contactnumber = contactnumber
+                    doctorprofile.save()
+
+                if city or country:
+                    if Location.objects.filter(country__iexact = country, city__iexact = city).exists():
+                        location = Location.objects.get(country__iexact = country,city__iexact = city)
+                    else:
+                        location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
+                    user.location = location
+                    user.save()
+                serializer = UserLoginSerializer(user)
+                data = serializer.data
+                return ({"data": data, "status": status.HTTP_201_CREATED, "success": "Doctor Profile Created"})
+                
+        except Exception as e:
+                print("e", str(e))
+                return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+
+           

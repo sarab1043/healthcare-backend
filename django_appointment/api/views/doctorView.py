@@ -123,9 +123,19 @@ class DoctorAvailabilityByDateView(APIView):
 class DoctorBookedSlotsView(APIView):
     permission_classes = (AllowAny,)
     """
-    Get Booked Slots of Doctor By Id
+    Get Booked & Unavailable Slots of Doctor By Id
     """
 
     def get(self, request, doc_id, format=None):
         result = doctorService.get_doctor_booked_slots(request, doc_id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+    
+
+class GoogleDoctorProfileView(APIView):
+    """
+    Create Google Logged In Doctor Profile
+    """
+
+    def post(self, request, format=None):
+        result = doctorService.google_doctor_profile(request, format=None)
         return Response(result, status=status.HTTP_200_OK)

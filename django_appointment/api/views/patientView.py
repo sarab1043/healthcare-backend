@@ -24,6 +24,16 @@ class PatientAppointmentView(APIView):
         """
         result = patientService.create_appointment(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
+    
+
+class AppointmentRecordByAptIdView(APIView):
+    def get(self, request, id, format=None):
+        """ 
+        Get Appointment Record
+        """
+        result = patientService.get_appointment_detail(
+            request, id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
 
 class PatientRecordByAptIdView(APIView):
 
@@ -38,7 +48,7 @@ class PatientRecordByAptIdView(APIView):
    
     
 class PatientRecordView(APIView):
-
+    
     def get(self, request, format=None):
         """
         Get PatientRecord
@@ -54,9 +64,9 @@ class PatientRecordView(APIView):
         result = patientService.create_patient_record(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
     
-    def put(self, request, format=None):
+    def put(self, request, pk, format=None):
         """
         Update PatientRecord
         """
-        result = patientService.update_patient_record(request, format=None)
+        result = patientService.update_patient_record(request, pk ,format=None)
         return Response(result, status=status.HTTP_200_OK)

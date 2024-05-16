@@ -71,64 +71,76 @@ class UserService(UserBaseService):
         try:
             email = request.data.get('email')
             password = request.data.get('password')
-            country = request.data.get('country')
-            city = request.data.get('city')
-            qualification = request.data.get('qualification')
-            specializations = request.data.get('specializations')
-            fullname = request.data.get('fullname')
-            contactnumber = request.data.get('contactnumber'),
-            gender= request.data.get('gender')
+           
             role=request.data.get('role')
             
                 
             required_params = ['email', 'password', 'role']
             missing_params = [param for param in required_params if param not in request.data]
 
-            if CustomUser.objects.filter(email=email).exists():
+
+            if not email or not password or not role:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist",  "existing_email": 'true'})
 
             if missing_params:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": f"The following parameters are required: {', '.join(missing_params)}"})
-            if (role == 'Patient'):
-                user = CustomUser.objects.create_user(email=email, password=password, role=role)
-            if (role == 'Doctor'):
-                if not specializations or not qualification or not country or not city:
-                    return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations and qualifications are required."})
-               
+            
+            if CustomUser.objects.filter(email=email).exists():
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist", "existing_email": 'true'})
+            
+            user = CustomUser.objects.create_user(email=email, password=password, role=role)
+            doctorprofile = DoctorProfile.objects.create(user=user)
 
-                specialization_ids = [spec_obj.id for spec_obj in [Specialization.objects.filter(name__iexact=specialization_name).first() for specialization_name in specializations] if spec_obj is not None]
-                if not specialization_ids:
-                    return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations do not found"})
-
-                user = CustomUser.objects.create_user(email=email, password=password, role=role)
-                doctorprofile = DoctorProfile.objects.create(user=user, qualification=qualification)
-                doctorprofile.specializations.set(specialization_ids)
-               
+            if (role=='Doctor'):
                 for day in range(0, 5):  # Monday to Friday
                     doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
-                if fullname:
-                    doctorprofile.fullname = fullname
-                    doctorprofile.save()
-                if contactnumber:
-                    doctorprofile.contactnumber = contactnumber
-                    doctorprofile.save()
+                for day in range(5, 7):  # Monday to Friday
+                    doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day, available=False)
+            
+            # if (role == 'Patient'):
+            #     user = CustomUser.objects.create_user(email=email, password=password, role=role)
+            # if (role == 'Doctor'):
+            #     if not specializations or not qualification or not country or not city:
+            #         return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations and qualifications are required."})
+               
 
-            if fullname:
-                    user.fullname = fullname
-                    user.save()
-            if gender:
-                user.gender = gender
-                user.save()
+            #     specialization_ids = [spec_obj.id for spec_obj in [Specialization.objects.filter(name__iexact=specialization_name).first() for specialization_name in specializations] if spec_obj is not None]
+            #     if not specialization_ids:
+            #         return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Specializations do not found"})
 
-            if city or country:
-                if Location.objects.filter(country__iexact = country, city__iexact = city).exists():
-                    location = Location.objects.get(country__iexact = country,city__iexact = city)
-                else:
-                    location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
-                user.location = location
-                user.save()
+            #     user = CustomUser.objects.create_user(email=email, password=password, role=role)
+            #     doctorprofile = DoctorProfile.objects.create(user=user, qualification=qualification)
+            #     doctorprofile.specializations.set(specialization_ids)
+               
+            #     for day in range(0, 5):  # Monday to Friday
+            #         doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
+            #     for day in range(5, 7):  # Monday to Friday
+            #         doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day, available=False)
+            #     if fullname:
+            #         doctorprofile.fullname = fullname
+            #         doctorprofile.save()
+            #     if contactnumber:
+            #         doctorprofile.contactnumber = contactnumber
+            #         doctorprofile.save()
+
+            # if fullname:
+            #         user.fullname = fullname
+            #         user.save()
+            # if gender:
+            #     user.gender = gender
+            #     user.save()
+
+            # if city or country:
+            #     if Location.objects.filter(country__iexact = country, city__iexact = city).exists():
+            #         location = Location.objects.get(country__iexact = country,city__iexact = city)
+            #     else:
+            #         location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
+            #     user.location = location
+            #     user.save()
+
             serializer = UserLoginSerializer(user)
             refresh = RefreshToken.for_user(user)
+
             data = serializer.data
             data['token'] = str(refresh)
             return ({"data": data, "status": status.HTTP_201_CREATED, "success": "User created successfully"})
@@ -156,20 +168,32 @@ class UserService(UserBaseService):
         try:
             print(request.data)
             user = CustomUser.objects.get(email=request.user)
-
-            serializer = UserLoginSerializer(user, data=request.data, partial=True)
+            city = request.data.get('city')
+            country = request.data.get('country')
+            if city or country:
+                if Location.objects.filter(country__iexact = country, city__iexact = city).exists():
+                    location = Location.objects.get(country__iexact = country,city__iexact = city)
+                else:
+                    location = Location.objects.create(country=country.capitalize(), city=city.capitalize())
+                user.location = location
+                user.save()
+            print(user , type(user))
+            serializer = UserLoginSerializer(instance = user, data=request.data, partial=True)
+            print(request.data)
             if serializer.is_valid():
                 serializer.save()
             else:
+                print(serializer.errors)
                 return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
             if (user.role == "Doctor"):
                 doctor_profile = DoctorProfile.objects.get(user=user)
-                serializer = UpdateProfileSerializer(doctor_profile, data=request.data, partial=True)
+                serializer = UpdateProfileSerializer(instance = doctor_profile, data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()
                     print("doctor_profile_serializer", serializer.data)
                 else:
+                    print(serializer.errors)
                     return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile updated successfully"})
@@ -205,12 +229,13 @@ class UserService(UserBaseService):
                         if user is not None:
                             login(request, user)
                             serializer = UserLoginSerializer(user)
-                            refresh = AccessToken.for_user(user)
+                            refresh = RefreshToken.for_user(user)
                             data = serializer.data
                             data['token'] = str(refresh)
                             return ({"data": data, "status": status.HTTP_200_OK, "success": "User login successfully"})
                     else:
                         user = CustomUser.objects.create_user(email=email, password=settings.SOCIAL_AUTH_PASSWORD)
+
                         user.username = fullname
                         user.first_name = fullname
                         user.last_name = last_name
@@ -219,11 +244,20 @@ class UserService(UserBaseService):
                         user.role = role
                         user.save()
 
+
+                        if (role=='Doctor'):
+                            doctorprofile = DoctorProfile.objects.create(user=user)
+                            
+                            for day in range(0, 5):  # Monday to Friday
+                                doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
+                            for day in range(5, 7):  # Monday to Friday
+                                doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day, available=False)
+
                         # if not role:
 
                         # doctorprofile = DoctorProfile.objects.create(user=user)
                         serializer = UserLoginSerializer(user)
-                        refresh = AccessToken.for_user(user)
+                        refresh = RefreshToken.for_user(user)
                         data = serializer.data
                         data['token'] = str(refresh)
                         return ({"data": data, "status": status.HTTP_201_CREATED, "success": "User created successfully"})
@@ -241,7 +275,8 @@ class UserService(UserBaseService):
         try:
             user = request.user
             if user:
-                Refresh_token = request.data["refresh"]
+                Refresh_token = request.headers.get("refresh")
+                print(Refresh_token)
                 try:
                     token = RefreshToken(Refresh_token)
                 except:
@@ -252,6 +287,7 @@ class UserService(UserBaseService):
             else:
                 return ({"data": None, "status": status.HTTP_404_NOT_FOUND, "error": "User do not found"})
         except Exception as e:
+            print(str(e))
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
     def forgot_password(self, request, format=None):
