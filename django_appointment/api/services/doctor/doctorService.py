@@ -248,6 +248,55 @@ class DoctorService(DoctorBaseService):
             print("Error:", e)
             return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
         
+    def break_time_availability(self, request, format=None):
+        try:
+            print("request data", request.data)
+            day_str = request.data.get('day', '').capitalize()
+            break_start_time = request.data.get('break_start_time')
+            break_end_time = request.data.get('break_end_time')
+
+            if not day_str:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Day is required"}
+            
+            day_int = next((item[0] for item in DoctorAvailability.DAY_CHOICES if item[1].lower() == day_str.lower()), None)
+            if day_int is None:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Invalid day"}
+            
+            if not break_start_time and break_end_time:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Invalid break time"}
+
+            doctor_obj = DoctorProfile.objects.get(user=request.user)
+            availability_obj = DoctorAvailability.objects.filter(day_of_week=day_int, doctor=doctor_obj).first()
+
+            if not availability_obj:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not available on day"}
+            
+            #convert datetime strings to objects
+            break_start_time = datetime.strptime(break_start_time, "%H:%M:%S").time()
+            break_end_time = datetime.strptime(break_end_time, "%H:%M:%S").time()
+
+            if Appointment.objects.filter(day= day_int, start_time = break_start_time, end_time = break_end_time).exists():
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Appointments exists in break time"}
+
+            if (availability_obj.break_start_time == break_start_time) and (availability_obj.break_end_time == break_end_time):
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "No changes detected. Break time already up-to-date."}
+            
+            with transaction.atomic():  # Use atomic transaction to ensure consistency
+                availability_obj.break_start_time = break_start_time
+                availability_obj.break_end_time = break_end_time
+                availability_obj.save()
+
+                serializer = UpdateWeeklyAvailabilitySerializer(availability_obj)
+                print(serializer.data)
+                return {"data": serializer.data, "status": status.HTTP_200_OK, "success": "Break time updated successfully"}
+                
+        except DoctorProfile.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_401_UNAUTHORIZED, "error": "Doctor not found"})
+        
+        except Exception as e:
+            print("Error:", e)
+            return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
+        
 
     # def weekly_hours_availability(self, request, id, format=None):
     #     try:
@@ -340,12 +389,88 @@ class DoctorService(DoctorBaseService):
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Availability not found"})
         except:
             return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
+        
+    def date_specific_available_slots(self, request, format=None):
+        try:
+            date = request.GET.get('date', '')
+            if not date:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Date is required"}
+
+            date_object = datetime.strptime(date, '%Y-%m-%d').date()
+
+            doctor_profile = DoctorProfile.objects.get(user=request.user)
+            doctor_availability = DoctorAvailability.objects.filter(day_of_week=date_object.weekday(), doctor=doctor_profile).first()
+
+            if not doctor_availability:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor not available on this date"}
+
+            doctor_appointments = Appointment.objects.filter(doctor=doctor_profile, date=date_object)
+
+            default_start_time = datetime.strptime(str(doctor_availability.default_working_start_time), '%H:%M:%S')
+            default_end_time = datetime.strptime(str(doctor_availability.default_working_end_time), '%H:%M:%S')
+
+            break_start_time = None
+            break_end_time = None
+            if doctor_availability.break_start_time and doctor_availability.break_end_time:
+                break_start_time = datetime.strptime(str(doctor_availability.break_start_time), '%H:%M:%S')
+                break_end_time = datetime.strptime(str(doctor_availability.break_end_time), '%H:%M:%S')
+
+            slot_duration = doctor_profile.appointment_slot_duration
+            current_time = default_start_time
+
+            # List of dictionaries for the entire schedule
+            schedule = []
+            while current_time < default_end_time:
+                if break_start_time and break_end_time and break_start_time <= current_time < break_end_time:
+                    current_time += timedelta(minutes=slot_duration)
+                    continue
+
+                slot_end_time = current_time + timedelta(minutes=slot_duration)
+                schedule.append({
+                    'start_time': current_time.strftime('%H:%M:%S'),
+                    'end_time': slot_end_time.strftime('%H:%M:%S')
+                })
+                current_time += timedelta(minutes=slot_duration)
+
+            # List of dictionaries for the existing appointments
+            appointments = []
+            for appointment in doctor_appointments:
+                appointments.append({
+                    'start_time': appointment.start_time.strftime('%H:%M:%S'),
+                    'end_time': appointment.end_time.strftime('%H:%M:%S')
+                })
+
+            # Calculate available slots by removing appointments from schedule
+            available_slots = []
+
+            for schedule_slot in schedule:
+                if schedule_slot not in appointments:
+                    available_slots.append(schedule_slot)
+
+            return {"data": available_slots, "status": status.HTTP_200_OK, "success": "Slots fetched successfully"}
+
+        except DoctorProfile.DoesNotExist:
+            return {"data": None, "status": status.HTTP_401_UNAUTHORIZED, "error": "Doctor not found"}
+        except Exception as e:
+            print("Error:", e)
+            return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
+
 
     def get_all_specialization(self, request, format=None):
         try:
             specializations = Specialization.objects.all()
             serializer = SpecializationSerializer(specializations, many=True)
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Specializations fetched successfully"})
+
+        except Exception as e:
+            print("Error:", e)
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+    def get_all_qualifications(self, request, format=None):
+        try:
+            specializations = Qualifications.objects.all()
+            serializer = QualificationSerializer(specializations, many=True)
+            return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Qualifications fetched successfully"})
 
         except Exception as e:
             print("Error:", e)
@@ -429,18 +554,25 @@ class DoctorService(DoctorBaseService):
                 slots = TimeSlotSerializer(
                     doctor_unavailable_slot.timeslot.all(), many=True).data
                 if not slots:
+                    try:
+                        day = doctor_unavailable_slot.date.strftime("%A") if doctor_unavailable_slot.date else doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1]
+                    except:
+                        day = ""
                     data = {
-                        "date": "",
+                        "date": doctor_unavailable_slot.date.strftime("%Y-%m-%d") if doctor_unavailable_slot.date else "",
                         "start_time": doctor_unavailable_slot.default_working_start_time,
                         "end_time": doctor_unavailable_slot.default_working_end_time,
-                        "day": doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1],
+                        "day": day,
                         "available" : doctor_unavailable_slot.available
                     }
                     formatted_slots.append(data)
                 else:
                     for slot in slots:
                         date = doctor_unavailable_slot.date.strftime("%Y-%m-%d") if doctor_unavailable_slot.date else ""
-                        day = doctor_unavailable_slot.date.strftime("%A") if doctor_unavailable_slot.date else doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1]
+                        try:
+                            day = doctor_unavailable_slot.date.strftime("%A") if doctor_unavailable_slot.date else doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1]
+                        except:
+                            day = ""
 
                         data = {
                             "date": date,

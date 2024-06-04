@@ -6,7 +6,7 @@ from rest_framework.response import Response
 import json
 from rest_framework import status
 from rest_framework.response import Response
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from api.serializers.userSerializer import *
@@ -25,6 +25,17 @@ from django.core.mail import send_mail
 from django.core.mail import EmailMessage
 import secrets
 from django.utils.timezone import localtime
+
+from base64 import urlsafe_b64encode 
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator  
+from django.utils.http import (
+    url_has_allowed_host_and_scheme, urlsafe_base64_decode, urlsafe_base64_encode
+)
+from django.core.exceptions import ValidationError
+User = get_user_model()
+from utils.send_email import send_forgot_password_mail
+import threading
 
 
 class UserService(UserBaseService):
@@ -166,7 +177,7 @@ class UserService(UserBaseService):
 
     def update_profile(self, request, format=None):
         try:
-            print(request.data)
+            print("rqst data*",request.data)
             user = CustomUser.objects.get(email=request.user)
             city = request.data.get('city')
             country = request.data.get('country')
@@ -297,31 +308,52 @@ class UserService(UserBaseService):
 
         try:
             user = CustomUser.objects.get(email=user_email)
-            send_password_reset_email(user)
-            return ({"data": [], "status": status.HTTP_200_OK, "success": "Email sent successfuly. Please check you email"})
+            token = PasswordResetToken.objects.get(user=user)
+            token.token = secrets.token_urlsafe(64)
+            token.created_at = datetime.now()
+            token.save()
+            token_to_send = token.token
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            print("uid on sending reset email:", uid)
+            
+            token_str = default_token_generator.make_token(user)
+            print("token on sending reset email:", token_str)
+        except PasswordResetToken.DoesNotExist:
+            new_token = secrets.token_urlsafe(64)
+            token = PasswordResetToken.objects.create(user=user, token=new_token)
+            token.created_at = datetime.now()
+            token.save()
+            token_to_send = new_token
+
+        try:
+            context = {
+                        "subject": "Forgot Password Mail - Healthcare",
+                        "url": f'http://localhost:3000/resetPassword/{uid}/{token_to_send}',
+                        "fullname": user.fullname,
+                        'protocol': 'http',
+                    }
+            t = threading.Thread(target=send_forgot_password_mail, args=[
+                user.email, context])
+            t.setDaemon(True)
+            t.start()
+            return ({"data": [], "status": status.HTTP_200_OK, "success": "Email sent successfuly. Please check your inbox"})
+        except Exception as e:
+            print(str(e))
+            return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "New password should be different from the current password"}
+
 
         except CustomUser.DoesNotExist:
             return ({"data": None, "status": status.HTTP_404_NOT_FOUND, "error": "User not found"})
         
         except Exception as e:
-            print(e)
+            print("forgot password error", e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
 
     def reset_password(self, request, token, format=None):
         try:
             new_password = request.data.get("new_password")
-            email = request.data.get("email")
 
-            if not new_password and email:
-                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Both email and new_password is required"}
-
-
-            is_valid = validate_token_fn(token, email)
-            print("is_valid", is_valid)
-            if not is_valid:
-                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token is not valid or has expired"}
-
-            
             valid_token = PasswordResetToken.objects.get(token=token)
             user_obj = valid_token.user
 
@@ -338,25 +370,50 @@ class UserService(UserBaseService):
             print("Exception occurred:", e)
             return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
 
-    def validate_token(self, request, token, format=None):
+    def validate_token(self, request, uid, token, format=None):
         try:
+            print("validate token")
             print(request.data)
-            email = request.data.get("email")
-            if not email:
-                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Email required"})
+            try:
+                print("heree")
+            # urlsafe_base64_decode() decodes to bytestring
+                try:
+                    user_id = urlsafe_base64_decode(uid).decode()
+                    print("user_id", user_id)
+                    user = User.objects.get(pk=user_id) 
+                    print("user", user)
+                except Exception as e:
+                    print(e)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist, ValidationError):
+                print("heree2")
+                user = None
+                return user
+            
+            # uid = urlsafe_base64_decode(uid).decode()
+            #     print("uid", uid)
+            #     user = User.objects.get(pk=uid)
 
-            token_is_valid = validate_token_fn(token, email)
+            if not uid:
+                print("uid not found")
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST , "error": "User uuid required"}
+            if not user:
+                print("user not found")
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST , "error": "User not found"}
+            
+            print("i am here")
+            token_is_valid = validate_token_fn(user.pk, token)
             if not token_is_valid:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token is invalid or expired"})
             else:
                 return ({"data": None, "status": status.HTTP_200_OK, "success": "Token is valid"})
 
         except Exception as e:
+            print("validate token errror",e)
             return {"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"}
 
-def validate_token_fn(token, email):
+def validate_token_fn(pk, token):
     try:
-        user = CustomUser.objects.get(email=email)
+        user = CustomUser.objects.get(pk=pk)
         print(user)
         valid_token = PasswordResetToken.objects.get(token=token, user=user)
         print("valid token email", valid_token.user)
@@ -386,6 +443,12 @@ def send_password_reset_email(user):
         token.created_at = datetime.now()
         token.save()
         token_to_send = token.token
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        print("uid on sending reset email:", uid)
+        
+        token_str = default_token_generator.make_token(user)
+        print("token on sending reset email:", token_str)
     except PasswordResetToken.DoesNotExist:
         new_token = secrets.token_urlsafe(64)
         token = PasswordResetToken.objects.create(user=user, token=new_token)
@@ -393,7 +456,7 @@ def send_password_reset_email(user):
         token.save()
         token_to_send = new_token
 
-    reset_link = f'http://localhost:8080/resetPassword/{token_to_send}'
+    reset_link = f'http://localhost:3000/resetPassword/{uid}/{token_to_send}'
 
     # Compose the email error
     subject = 'Password Reset'

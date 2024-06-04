@@ -62,6 +62,14 @@ class WeeklyHoursAvailabilityView(APIView):
         result = doctorService.weekly_hours_availability(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
     
+class BreakTimeAvailabilityView(APIView):
+    """
+    Update Break Time
+    """
+    def post(self, request, format=None):
+        result = doctorService.break_time_availability(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+    
     # def patch(self, request, id, format=None):
     #     result = doctorService.weekly_hours_availability(request,id, format=None)
     #     return Response(result, status=status.HTTP_200_OK)
@@ -78,6 +86,14 @@ class DateSpecificAvailabilityView(APIView):
         result = doctorService.delete_date_specific_availability(request, id, format=None)
         return Response(result, status=status.HTTP_200_OK)
 
+class DateSpecificAvailabileSlotsView(APIView):
+    """
+    Get Available Slots Date Specific
+    """
+    def get(self, request, format=None):
+        result = doctorService.date_specific_available_slots(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+
 class SpecializationListView(APIView):
     permission_classes = (AllowAny,)
 
@@ -88,6 +104,15 @@ class SpecializationListView(APIView):
         result = doctorService.get_all_specialization(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
     
+class QualificationListView(APIView):
+    permission_classes = (AllowAny,)
+
+    """
+    Get All Speciallizations
+    """
+    def get(self, request, format=None):
+        result = doctorService.get_all_qualifications(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)
 
 class UpdateAppointmentDurationView(APIView):
     """

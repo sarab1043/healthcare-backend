@@ -93,9 +93,9 @@ class ResetPasswordView(APIView):
 class ValidateTokenView(APIView):
     permission_classes = (AllowAny,)
 
-    def post(self, request, token, format=None):
+    def get(self, request,uid, token, format=None):
         """
-        Validate token
+        Validate uid and token
         """
-        result = userService.validate_token(request, token, format=None)
+        result = userService.validate_token(request, uid, token, format=None)
         return Response(result, status=status.HTTP_200_OK)

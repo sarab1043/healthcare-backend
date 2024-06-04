@@ -18,6 +18,11 @@ class SpecializationSerializer(serializers.ModelSerializer):
         model = Specialization
         fields = "__all__"
 
+class QualificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Qualifications
+        fields = "__all__"
+
 class UpdateProfileSerializer(serializers.ModelSerializer):
     user = UserLoginSerializer(read_only=True)  
     class Meta:

@@ -47,3 +47,11 @@ class DoctorAvailability(models.Model):
     available = models.BooleanField(default=True)
     default_working_start_time = models.TimeField(default='09:00')
     default_working_end_time = models.TimeField(default='17:00')
+
+
+class Qualifications(models.Model):
+    name = models.CharField(max_length=200)
+    
+    def __str__(self):
+        return self.name
+    

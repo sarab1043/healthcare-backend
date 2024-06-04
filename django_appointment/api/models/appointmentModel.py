@@ -1,6 +1,7 @@
 from django.db import models
 from .locationModel import Location
 from .doctorModel import *
+from .customUserModel import *
 
 class Appointment(models.Model):
     DAY_CHOICES = [
@@ -38,6 +39,8 @@ class Appointment(models.Model):
     date = models.DateField(default=None)
     day = models.IntegerField(choices=DAY_CHOICES, blank=True, default=None)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
+    confirmed_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)    
+
     created_at = models.DateTimeField(auto_now_add=True)  
     updated_at = models.DateTimeField(auto_now=True)
 

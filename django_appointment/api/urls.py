@@ -33,7 +33,7 @@ urlpatterns = [
     path('signup/', SignupView.as_view(), name="signup"),
     path('forgotpassword/', ForgotPasswordView.as_view(), name="forgot-password"),
     path('resetpassword/<token>/', ResetPasswordView.as_view(), name="forgotpassword"),
-    path('validate/<token>/', ValidateTokenView.as_view(), name="validatetoken"),
+    path('validate/<uid>/<token>/', ValidateTokenView.as_view(), name="validatetoken"),
     path('logout/', LogoutView.as_view(), name="logout"),
 
     path('profile/', ProfileView.as_view(), name="profile"),
@@ -41,8 +41,11 @@ urlpatterns = [
     path('doctor/working-days/', DoctorWorkingDaysView.as_view(), name="get-doctor-working-days"),
     path('doctor/<int:id>/', DoctorByIdView.as_view(), name="get-doctor-by-id"),
     path('doctor/availability/weekly-hours/', WeeklyHoursAvailabilityView.as_view(), name="update-weekly-hours"),
+    path('doctor/availability/break-time/', BreakTimeAvailabilityView.as_view(), name="update-break-time"),
     path('doctor/availability/date-specific/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
     path('doctor/availability/date-specific/<int:id>/', DateSpecificAvailabilityView.as_view(), name="update-date-specific"),
+    path('doctor/get-availabile-slots/', DateSpecificAvailabileSlotsView.as_view(), name="get-availabile-slots-by-date"),
+
     path('doctors/', GetAllDoctorsView.as_view(), name="get-all-doctors"),
     path('doctors/search/', SearchDoctors.as_view(), name='search-doctors'),
     path('doctor/appointments/', DoctorAppointmentView.as_view( ), name='get-all-appointments'),
@@ -57,6 +60,10 @@ urlpatterns = [
     path('patient/records/', PatientRecordView.as_view(), name="patient-record"),
     path('patient/records/<int:pk>/', PatientRecordView.as_view(), name="patient-record"),
 
-    path('specializations/', SpecializationListView.as_view() , name='specializations')
+    path('specializations/', SpecializationListView.as_view() , name='specializations'),
+    path('qualifications/', QualificationListView.as_view() , name='qualifications')
+
 
 ]
+
+

@@ -10,6 +10,9 @@ from django.db.models import Q
 from datetime import datetime, date
 from django.db.models import F
 from datetime import datetime, timedelta
+from ..patient import patientService
+import threading
+from utils.send_email import send_appointment_confirm_mail
 
 class PatientService(PatientBaseService):
 
@@ -83,6 +86,17 @@ class PatientService(PatientBaseService):
                 serializer.validated_data['doctor'] = doctor_obj
                 serializer.save ()
                 data = serializer.data
+                
+                context = {
+                        "subject": "Appointment Confirmation Mail - Healthcare",
+                        "url": 'http://localhost:3000/signup',
+                        "fullname": patientName,
+                        'protocol': 'http',
+                    }
+                t = threading.Thread(target=send_appointment_confirm_mail, args=[
+                    patientEmail, context])
+                t.setDaemon(True)
+                t.start()
                 return ({"data": data, "status": status.HTTP_201_CREATED, "success": "Appointment saved"})
             print(serializer.errors)
 
@@ -127,6 +141,107 @@ class PatientService(PatientBaseService):
         except Exception as e:
             print("e", e)
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+    def confirm_appointment_status(self, request, id, format=None):
+        try:
+            print("rqst data", request.data)
+            user = CustomUser.objects.get(email=request.user)
+            appointment = Appointment.objects.get(id=id)
+            apt_status = request.data.get('status')
+
+
+            if not apt_status:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Status is required"}
+
+            if (apt_status == 'Cancelled') and (appointment.status == 'Cancelled'):
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "This appointment is already Cancelled"}
+
+            if (apt_status == 'Rescheduled') and (appointment.status == 'Cancelled'):
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "This appointment is cancelled"}
+
+            current_time = datetime.now()
+            appointment_start_time = datetime.combine(appointment.date, appointment.start_time)
+            three_hours_behind = appointment_start_time - timedelta(hours=3)
+           
+
+            if (current_time >= three_hours_behind):
+                if apt_status not in ['Rescheduled', 'Cancelled']:
+                    return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "The time limit to update the appointment has exceeded. You can only reschedule or cancel the appointment"}
+
+            if apt_status == 'Rescheduled':
+                rescheduled_start_time_str = request.data.get('start_time')
+                rescheduled_end_time_str = request.data.get('end_time')
+
+                # Convert string representations to datetime.time objects
+                rescheduled_start_time = datetime.strptime(rescheduled_start_time_str, '%H:%M:%S').time()
+                rescheduled_end_time = datetime.strptime(rescheduled_end_time_str, '%H:%M:%S').time()
+                rescheduled_date = request.data.get('date')
+
+                start_time = appointment.start_time
+                end_time = appointment.end_time
+                date = appointment.date
+                day_of_week = appointment.day
+                if apt_status == 'Rescheduled' and not rescheduled_start_time and not rescheduled_end_time and not rescheduled_date:
+                    return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Resheduled start and end time required"}
+                
+                if rescheduled_date and rescheduled_start_time and rescheduled_end_time:
+                    date = rescheduled_date
+                    start_time = rescheduled_start_time
+                    end_time = rescheduled_end_time
+                    day_of_week = datetime.strptime(rescheduled_date, '%Y-%m-%d').weekday()
+
+                    # Convert time strings to datetime objects
+                    start_datetime = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M:%S")
+                    end_datetime = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M:%S")
+                    day_string = DoctorAvailability.objects.filter(day_of_week=day_of_week, available=True)
+
+                    if end_datetime < datetime.now(): 
+                        return {
+                            "data": None,
+                            "status": status.HTTP_400_BAD_REQUEST,
+                            "error": "You cannot book appointments for past dates or times that have already passed."
+                        }
+                    
+                    # Calculate appointment duration
+                    appointment_duration = end_datetime - start_datetime
+                
+
+                    request.data['start_time'] = rescheduled_start_time
+                    request.data['end_time'] = rescheduled_end_time
+                    request.data['date'] = rescheduled_date
+
+
+                if Appointment.objects.filter(
+                    patientEmail=appointment.patientEmail
+                    ).filter(
+                        Q(date=date, start_time__lt=end_time, end_time__gt=start_time)  & 
+                        (Q(status="Rescheduled") | Q(status="Confirmed"))
+                    ).exclude(Q(status="Cancelled") | Q(status="Completed") | Q(status="Pending")).exists():
+                    return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Patient already has an appointment scheduled for this time slot"}
+
+            if apt_status=='Confirmed':
+                appointment.status='Confirmed'
+            if apt_status=='Cancelled':
+                appointment.status='Cancelled'
+            appointment.confirmed_by=user
+            appointment.save()
+
+            serializer = GetAppointmentSerializer(appointment)
+            
+            return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": f"Appoinment {apt_status} successfully"})
+
+            print("serializer.errors", serializer.errors)
+
+        except Appointment.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_404_NOT_FOUND, "error": "Appointment not found"})
+
+        except DoctorProfile.DoesNotExist:
+            return ({"data": None, "status": status.HTTP_404_NOT_FOUND, "error": "Doctor not found"})
+
+        except Exception as e:
+            print("Error:", e)
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+
 
     def create_patient_record(self, request, format=None):
         try:
@@ -199,7 +314,7 @@ class PatientService(PatientBaseService):
                 # Check if the appointment is confirmed or rescheduled
                record_obj = PatientRecord.objects.get(appointment=appointment)
                serializer = PatientRecordSerializers(record_obj)
-               return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
+               return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successfully"})
             else:
                 return {"data": None, "status": status.HTTP_403_FORBIDDEN, "error": "You are not authorized to access this appointment."}
 

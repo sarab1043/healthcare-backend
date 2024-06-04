@@ -20,5 +20,6 @@ admin.site.register(PatientRecord)
 admin.site.register(PasswordResetToken)
 admin.site.register(TimeSlot)
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Qualifications)
 
 

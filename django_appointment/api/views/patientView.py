@@ -34,6 +34,14 @@ class AppointmentRecordByAptIdView(APIView):
         result = patientService.get_appointment_detail(
             request, id, format=None)
         return Response(result, status=status.HTTP_200_OK)
+    
+    def post(self, request, id, format=None):
+        """ 
+        Get Appointment Record
+        """
+        result = patientService.confirm_appointment_status(
+            request, id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
 
 class PatientRecordByAptIdView(APIView):
 
