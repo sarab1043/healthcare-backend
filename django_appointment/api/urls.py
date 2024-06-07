@@ -53,6 +53,10 @@ urlpatterns = [
     path('doctor/appointment-duration/', UpdateAppointmentDurationView.as_view(), name='update-appointment-duration'),
     path("doctor/availability/<int:docid>/<str:date>/", DoctorAvailabilityByDateView.as_view(), name="get-doctor-availability-by-date"),
     path("doctor/booked-slots/<int:doc_id>/", DoctorBookedSlotsView.as_view(), name="get-doctor-booked-slots-by-id"),
+    path("doctor/break-slots/<int:doc_id>/", DoctorBreakSlotsView.as_view(), name="get-doctor-break-slots-by-id"),
+    path("doctor/get-slot-duration/<int:doc_id>/", GetDoctorSlotDurationView.as_view(), name="get-slot-duration"),
+    path("doctor/update-slot-duration/", UpdateDoctorSlotDurationView.as_view(), name="update-slot-duration"),
+
 
     path('patient/appointments/', PatientAppointmentView.as_view(), name="appointments-by-patient"),
     path('patient/appointment/<id>/', AppointmentRecordByAptIdView.as_view(), name="get-appointments-by-id"),

@@ -155,6 +155,36 @@ class DoctorBookedSlotsView(APIView):
         result = doctorService.get_doctor_booked_slots(request, doc_id, format=None)
         return Response(result, status=status.HTTP_200_OK)
     
+class DoctorBreakSlotsView(APIView):
+    permission_classes = (AllowAny,)
+    """
+    Get Break Time Slots of Doctor By Id
+    """
+    def get(self, request, doc_id, format=None):
+        result = doctorService.get_doctor_break_slots(request, doc_id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+    
+
+class GetDoctorSlotDurationView(APIView):
+    """
+    Get Default Slot Duration of Doctor
+    """
+    permission_classes = (AllowAny,)
+
+    def get(self, request, doc_id, format=None):
+        result = doctorService.get_slot_duration(request, doc_id, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+    
+    
+class UpdateDoctorSlotDurationView(APIView):
+    """
+    Update Default Slot Duration of Doctor
+    """
+
+    def post(self, request, format=None):   
+        result = doctorService.update_slot_duration(request, format=None)
+        return Response(result, status=status.HTTP_200_OK)
+    
 
 class GoogleDoctorProfileView(APIView):
     """

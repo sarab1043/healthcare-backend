@@ -41,8 +41,8 @@ class DoctorAvailability(models.Model):
     date = models.DateField(null=True, blank=True)
     day_of_week = models.IntegerField(choices=DAY_CHOICES, blank=True, null=True)  # Make it nullable
     timeslot = models.ManyToManyField(TimeSlot, blank=True, null=True)
-    break_start_time = models.TimeField(null=True, blank=True)
-    break_end_time = models.TimeField(null=True, blank=True)
+    break_start_time = models.TimeField(null=True, blank=True, default='12:45')
+    break_end_time = models.TimeField(null=True, blank=True, default='13:30')
     description = models.TextField(null=True, blank=True)
     available = models.BooleanField(default=True)
     default_working_start_time = models.TimeField(default='09:00')

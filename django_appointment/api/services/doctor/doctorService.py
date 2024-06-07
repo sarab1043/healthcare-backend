@@ -562,6 +562,8 @@ class DoctorService(DoctorBaseService):
                         "date": doctor_unavailable_slot.date.strftime("%Y-%m-%d") if doctor_unavailable_slot.date else "",
                         "start_time": doctor_unavailable_slot.default_working_start_time,
                         "end_time": doctor_unavailable_slot.default_working_end_time,
+                        "break_start_time": doctor_unavailable_slot.break_start_time,
+                        "break_end_time": doctor_unavailable_slot.break_end_time,
                         "day": day,
                         "available" : doctor_unavailable_slot.available
                     }
@@ -573,14 +575,22 @@ class DoctorService(DoctorBaseService):
                             day = doctor_unavailable_slot.date.strftime("%A") if doctor_unavailable_slot.date else doctor_unavailable_slot.DAY_CHOICES[doctor_unavailable_slot.day_of_week][1]
                         except:
                             day = ""
-
+     
                         data = {
                             "date": date,
                             "start_time": slot['start_time'],
                             "end_time": slot['end_time'],
+                            "break_start_time": doctor_unavailable_slot.break_start_time,
+                            "break_end_time": doctor_unavailable_slot.break_end_time,
                             "day": day,
                             "available" : doctor_unavailable_slot.available
                         }
+                        if doctor_unavailable_slot.date:
+                            weekday = doctor_unavailable_slot.date.weekday()
+                            doctor_obj = DoctorAvailability.objects.get(day_of_week = weekday, doctor__user = user)
+                            data["break_start_time"]= doctor_obj.break_start_time
+                            data["break_end_time"]= doctor_obj.break_end_time
+
                         formatted_slots.append(data)
 
             appointments = Appointment.objects.filter(
@@ -595,6 +605,94 @@ class DoctorService(DoctorBaseService):
                 data = formatted_slots
 
             return {"data": data, "status": status.HTTP_200_OK, "success": "Booked & Unavailable Slots fetched successfully"}
+
+        except Exception as e:
+            print("e", str(e))
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+    def get_doctor_break_slots(self, request, doc_id, format=None):
+        try:
+            user = CustomUser.objects.filter(id=doc_id).first()
+            if not user:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User not found."})
+
+            # getting day availablity time slots of doctor
+            doctor_availabile_slots = DoctorAvailability.objects.filter(
+                doctor__user=user)
+
+            data = DoctorBreakSlotSerializer(doctor_availabile_slots, many = True).data
+            return {"data": data, "status": status.HTTP_200_OK, "success": "Break Slots fetched successfully"}
+
+        except Exception as e:
+            print("e", str(e))
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+
+    def get_slot_duration(self, request, doc_id, format=None):
+        try:
+            user_profile = DoctorProfile.objects.filter(user__id = doc_id).first()
+            if not user_profile:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User profile not found."})
+            
+            data = {
+                "slot_duration":user_profile.appointment_slot_duration
+            }
+            return {"data": data, "status": status.HTTP_200_OK, "success": "Default slot duration fetched successfully"}
+
+        except Exception as e:
+            print("easdfsdfsdfsdf", str(e))
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+    def update_slot_duration(self, request, format=None):
+        try:
+            slot_duration = request.data.get("slot_duration")
+
+            if not slot_duration:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Slot duration not found."})
+            
+            user_profile = DoctorProfile.objects.filter(user = request.user).first()
+            print(DoctorProfile,'DoctorProfile')
+            if not user_profile:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User profile not found."})
+            
+            if user_profile.appointment_slot_duration == slot_duration:
+                return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "No changes detected. Slot duration already up-to-date."}
+
+            # updating slot durations
+            user_profile.appointment_slot_duration = slot_duration
+            user_profile.save()
+
+
+            ENUM = {
+                30:{
+                    "break_start_time":"13:00",
+                    "break_end_time":"13:30"
+                },
+                40:{
+                    "break_start_time":"12:20",
+                    "break_end_time":"13:00"
+                },
+                45:{
+                    "break_start_time":"12:45",
+                    "break_end_time":"13:30"
+                },
+                50:{
+                    "break_start_time":"13:10",
+                    "break_end_time":"14:00"
+                },
+                60:{
+                    "break_start_time":"12:00",
+                    "break_end_time":"13:00"
+                }
+            }
+            print(type(slot_duration))  
+
+            print(ENUM[slot_duration]["break_start_time"])
+
+            DoctorAvailability.objects.filter(date = None, doctor = user_profile).update(break_start_time = ENUM[slot_duration]["break_start_time"],break_end_time = ENUM[slot_duration]["break_end_time"],)
+            
+
+            return {"data": [], "status": status.HTTP_200_OK, "success": "Default slot duration updated successfully"}
 
         except Exception as e:
             print("e", str(e))

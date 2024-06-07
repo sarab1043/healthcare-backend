@@ -88,3 +88,13 @@ class UpdateAppointmentDurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorProfile
         fields = ('appointment_slot_duration',)
+
+
+class DoctorBreakSlotSerializer(serializers.ModelSerializer):
+    day = serializers.SerializerMethodField()   
+    class Meta:
+        model = DoctorAvailability
+        fields = ('date', 'day', 'break_start_time', 'break_end_time', 'available')
+
+    def get_day(self, obj):
+        return obj.DAY_CHOICES[obj.day_of_week][1]
