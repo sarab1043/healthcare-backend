@@ -185,6 +185,15 @@ class UpdateDoctorSlotDurationView(APIView):
         result = doctorService.update_slot_duration(request, format=None)
         return Response(result, status=status.HTTP_200_OK)
     
+class DoctorSlugProfileView(APIView):
+    permission_classes = (AllowAny,)
+    """
+    Get Doctor Profile by Slug
+    """
+
+    def get(self, request, slug, format=None):
+        result = doctorService.slug_profile(request, slug, format=None)
+        return Response(result, status=status.HTTP_200_OK)
 
 class GoogleDoctorProfileView(APIView):
     """

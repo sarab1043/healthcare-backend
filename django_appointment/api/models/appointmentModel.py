@@ -22,7 +22,7 @@ class Appointment(models.Model):
         ("Completed" , 'Completed'),
     ]
     patientName = models.CharField(max_length=100, default=None)                                                                                        
-    patientphoneNumber = models.IntegerField(default=None)
+    contactnumber = models.IntegerField(default=None)
     patientEmail = models.EmailField(default=None)    
     patientDob = models.DateTimeField(default=None,null=True, blank=True)                                                  
     GENDER_CHOICES = [

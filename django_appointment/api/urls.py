@@ -56,6 +56,7 @@ urlpatterns = [
     path("doctor/break-slots/<int:doc_id>/", DoctorBreakSlotsView.as_view(), name="get-doctor-break-slots-by-id"),
     path("doctor/get-slot-duration/<int:doc_id>/", GetDoctorSlotDurationView.as_view(), name="get-slot-duration"),
     path("doctor/update-slot-duration/", UpdateDoctorSlotDurationView.as_view(), name="update-slot-duration"),
+    path("doctor/<uuid:slug>/", DoctorSlugProfileView.as_view(), name="get-profile-by-slug"),
 
 
     path('patient/appointments/', PatientAppointmentView.as_view(), name="appointments-by-patient"),
@@ -63,6 +64,8 @@ urlpatterns = [
     path('patient/record/<id>/', PatientRecordByAptIdView.as_view(), name="patient-record-by-appointment-id"),
     path('patient/records/', PatientRecordView.as_view(), name="patient-record"),
     path('patient/records/<int:pk>/', PatientRecordView.as_view(), name="patient-record"),
+    path('patient/appointment-detail/', PatientAppointmentView.as_view(), name="get-appointment-detail"),
+
 
     path('specializations/', SpecializationListView.as_view() , name='specializations'),
     path('qualifications/', QualificationListView.as_view() , name='qualifications')

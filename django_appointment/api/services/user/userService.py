@@ -69,7 +69,7 @@ class UserService(UserBaseService):
                 refresh = RefreshToken.for_user(user)
                 data = serializer.data
                 data['token'] = str(refresh)
-                return ({"data": data, "status": status.HTTP_200_OK, "success": "User login successfully"})
+                return ({"data": data, "status": status.HTTP_200_OK, "success": f"{user.role} login successfully"})
             else:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Invalid Credentials"})
 
@@ -100,9 +100,9 @@ class UserService(UserBaseService):
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User with this email already exist", "existing_email": 'true'})
             
             user = CustomUser.objects.create_user(email=email, password=password, role=role)
-            doctorprofile = DoctorProfile.objects.create(user=user)
 
             if (role=='Doctor'):
+                doctorprofile = DoctorProfile.objects.create(user=user)
                 for day in range(0, 5):  # Monday to Friday
                     doctor_availability, created = DoctorAvailability.objects.get_or_create(doctor=doctorprofile, day_of_week=day)
                 for day in range(5, 7):  # Monday to Friday
@@ -154,7 +154,7 @@ class UserService(UserBaseService):
 
             data = serializer.data
             data['token'] = str(refresh)
-            return ({"data": data, "status": status.HTTP_201_CREATED, "success": "User created successfully"})
+            return ({"data": data, "status": status.HTTP_201_CREATED, "success": f"{role} created successfully"})
         
         except Exception as e:
             print("eeeeeeeeeee", e)
@@ -165,10 +165,13 @@ class UserService(UserBaseService):
             user = CustomUser.objects.get(email = request.user)
             if (user.role == "Doctor"):
                 doctor_obj = DoctorProfile.objects.get(user = user.id)
-                serializer = DoctorProfileSerializer(doctor_obj, context={'request': request})
+                serialized = DoctorProfileSerializer(doctor_obj, context={'request': request}).data
             else:
-                serializer = UserLoginSerializer(user, context={'request': request})
-            return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Profile fetched successfully"})
+                serialized = UserLoginSerializer(user, context={'request': request}).data
+                user_appointment = Appointment.objects.filter(patientEmail= user.email)
+                if user_appointment.exists() and user.contactnumber is None:
+                    serialized['contactnumber'] = user_appointment.first().contactnumber
+            return ({"data": serialized, "status": status.HTTP_200_OK, "success": "Profile fetched successfully"})
         except User.DoesNotExist:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "User not found"})
         except Exception as e:
@@ -235,15 +238,26 @@ class UserService(UserBaseService):
                     fullname=google_user_data['name']
                     provider = "Google"
                     user = CustomUser.objects.filter(email=email)
+                    print('asdfasdfasdfsadfasdf1')
+                    try:
+                        if user.first().registration_method == 'email':
+                                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Email alreay registered!"})
+                    except:
+                        pass
                     if user.exists():
                         user = authenticate(request, email=email, password=settings.SOCIAL_AUTH_PASSWORD)
+                        print('asdfasdf4')
                         if user is not None:
                             login(request, user)
+                            print('asdfasdf5')
+
                             serializer = UserLoginSerializer(user)
                             refresh = RefreshToken.for_user(user)
                             data = serializer.data
                             data['token'] = str(refresh)
+                            print(data)
                             return ({"data": data, "status": status.HTTP_200_OK, "success": "User login successfully"})
+                        
                     else:
                         user = CustomUser.objects.create_user(email=email, password=settings.SOCIAL_AUTH_PASSWORD)
 
@@ -253,7 +267,9 @@ class UserService(UserBaseService):
                         user.fullname = first_name  + ' '+ last_name
                         user.provider = provider
                         user.role = role
+                        user.registration_method='google'
                         user.save()
+                        print('asdfasdfasdfsadfasdf2')
 
 
                         if (role=='Doctor'):
@@ -274,6 +290,7 @@ class UserService(UserBaseService):
                         return ({"data": data, "status": status.HTTP_201_CREATED, "success": "User created successfully"})
 
                 except Exception as e:
+                    print(e)
                     return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token in invalid or has expired"})
             else:
                 return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Token in invalid or has expired"})
@@ -306,30 +323,30 @@ class UserService(UserBaseService):
         if not user_email:
             return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Email is required"})
 
+        user = CustomUser.objects.filter(email=user_email).first()
+        if not user:
+            return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Email not registered"})
+        
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        print("uid on sending reset email:", uid)
         try:
-            user = CustomUser.objects.get(email=user_email)
             token = PasswordResetToken.objects.get(user=user)
             token.token = secrets.token_urlsafe(64)
             token.created_at = datetime.now()
             token.save()
-            token_to_send = token.token
 
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            print("uid on sending reset email:", uid)
-            
-            token_str = default_token_generator.make_token(user)
-            print("token on sending reset email:", token_str)
+            # token_str = default_token_generator.make_token(user)
+            # print("token on sending reset email:", token_str)
         except PasswordResetToken.DoesNotExist:
             new_token = secrets.token_urlsafe(64)
             token = PasswordResetToken.objects.create(user=user, token=new_token)
             token.created_at = datetime.now()
             token.save()
-            token_to_send = new_token
 
         try:
             context = {
                         "subject": "Forgot Password Mail - Healthcare",
-                        "url": f'http://localhost:3000/resetPassword/{uid}/{token_to_send}',
+                        "url": f'http://localhost:3000/resetPassword/{uid}/{token.token}',
                         "fullname": user.fullname,
                         'protocol': 'http',
                     }
@@ -340,7 +357,7 @@ class UserService(UserBaseService):
             return ({"data": [], "status": status.HTTP_200_OK, "success": "Email sent successfuly. Please check your inbox"})
         except Exception as e:
             print(str(e))
-            return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "New password should be different from the current password"}
+            return {"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Something went wrong"}
 
 
         except CustomUser.DoesNotExist:

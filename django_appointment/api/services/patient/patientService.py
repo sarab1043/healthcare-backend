@@ -22,7 +22,7 @@ class PatientService(PatientBaseService):
     def create_appointment(self, request, format=None):
         try:
             print(request.user.id)
-            required_params = ['country', 'city',  'specialization', 'doctor', 'start_time', 'end_time', 'date', 'patientName', 'patientphoneNumber', 'patientEmail']
+            required_params = ['country', 'city',  'specialization', 'doctor', 'start_time', 'end_time', 'date', 'patientName', 'contactnumber', 'patientEmail']
 
             # Check if all required parameters are present
             missing_params = [param for param in required_params if param not in request.data]
@@ -44,7 +44,8 @@ class PatientService(PatientBaseService):
             city = request.data['city']
             specialization = request.data['specialization']
             patientName = request.data.get('patientName')
-            patientphoneNumber = request.data.get('patientphoneNumber')
+            patientphoneNumber = request.data.get('contactnumber')
+            print('asdfasdfasdfasdfsdf', patientphoneNumber)
             patientEmail = request.data.get('patientEmail')
             start_time = request.data['start_time']
             end_time = request.data['end_time']
@@ -127,6 +128,8 @@ class PatientService(PatientBaseService):
             appointments_obj = Appointment.objects.filter(patientEmail=email).order_by('-created_at')
 
             serializer = GetAppointmentSerializer(appointments_obj, many=True)
+
+            print("GetAppointmentSerializer",GetAppointmentSerializer)
             return ({"data": serializer.data, "status": status.HTTP_201_CREATED, "success": "Appointment fetched successully"})
 
         except Exception as e:
@@ -136,6 +139,7 @@ class PatientService(PatientBaseService):
     def get_appointment_detail(self, request, pk, format=None):
         try:
             appointment = Appointment.objects.filter(id=pk).first()
+            print("Appointment",Appointment)
             serializer = GetAppointmentSerializer(appointment)
             return ({"data": serializer.data, "status": status.HTTP_200_OK, "success": "Appointment fetched successully"})
         except Exception as e:

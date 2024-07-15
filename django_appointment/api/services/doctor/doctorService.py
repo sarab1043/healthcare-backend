@@ -284,6 +284,7 @@ class DoctorService(DoctorBaseService):
             with transaction.atomic():  # Use atomic transaction to ensure consistency
                 availability_obj.break_start_time = break_start_time
                 availability_obj.break_end_time = break_end_time
+                availability_obj.break_time_updated = True
                 availability_obj.save()
 
                 serializer = UpdateWeeklyAvailabilitySerializer(availability_obj)
@@ -381,6 +382,7 @@ class DoctorService(DoctorBaseService):
         try:
             doctor_obj = DoctorProfile.objects.get(user=request.user.id)
             avt_obj = DoctorAvailability.objects.get(id=id, doctor=doctor_obj)
+            avt_obj.timeslot.all().delete()
             avt_obj.delete() 
             return {"data": None, "status": status.HTTP_200_OK, "success": "Deleted successfully"}
         except DoctorProfile.DoesNotExist:
@@ -689,7 +691,7 @@ class DoctorService(DoctorBaseService):
 
             print(ENUM[slot_duration]["break_start_time"])
 
-            DoctorAvailability.objects.filter(date = None, doctor = user_profile).update(break_start_time = ENUM[slot_duration]["break_start_time"],break_end_time = ENUM[slot_duration]["break_end_time"],)
+            DoctorAvailability.objects.filter(date = None, doctor = user_profile).exclude(break_time_updated = True).update(break_start_time = ENUM[slot_duration]["break_start_time"],break_end_time = ENUM[slot_duration]["break_end_time"],)
             
 
             return {"data": [], "status": status.HTTP_200_OK, "success": "Default slot duration updated successfully"}
@@ -697,6 +699,25 @@ class DoctorService(DoctorBaseService):
         except Exception as e:
             print("e", str(e))
             return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
+
+    def slug_profile(self, request, slug, format=None):
+        try:
+            slug_doc_profile = DoctorProfile.objects.filter(slug = slug)
+
+            if not slug_doc_profile.exists():
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor Profile not found."})
+            
+            if (slug_doc_profile.first().user.role == "Doctor"):
+                serializer = DoctorProfileSerializer(slug_doc_profile.first(), context={'request': request})
+                return {"data": serializer.data, "status": status.HTTP_200_OK, "success": "Doctor Profile fetched successfully"}
+            else:
+                return ({"data": None, "status": status.HTTP_400_BAD_REQUEST, "error": "Doctor Profile not found."})
+
+        except Exception as e:
+            print("e", str(e))
+            return ({"data": None, "status": status.HTTP_500_INTERNAL_SERVER_ERROR, "error": "Something went wrong"})
+        
         
     def google_doctor_profile(self, request, format=None):
         try:
